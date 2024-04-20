@@ -68,8 +68,8 @@ class CalendarAlarmService:
         systemPrompt = [("system", """From the user_input you will extract the name (string) of the event, the category of one of the types "always | work | home" for the event (if category is unclear, default to "always"), lead_time (number) which is how long before the event I should be reminded, event_time (datetime) is when the event should actually happen, and creation_time of the call to the llm (currentDateTime) Your JSON response will only have the fields 'name', 'category', 'lead_time' (always expressed in terms of minutes. So 3 hours = 180 for example), 'event_time', and 'creation_time'.
                         {user_input}
                         {current_time}
-                        Finally, run the output through the tool attached to the agent to get the final response.
-                        Return a json object that has a field for the final response, as well as a field for the initial json parsing."""),
+                        Finally, run the output through the tool attached to the agent to get the final response in a field called response.
+                        Return a json object that has a field for the final response, as well as a field for the json"""),
                         MessagesPlaceholder("agent_scratchpad")
                         ]
 
