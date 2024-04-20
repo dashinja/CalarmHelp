@@ -1,14 +1,14 @@
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from dotenv import load_dotenv
 from pydantic.v1 import BaseModel, Field
 
-from datetime import date
 from enum import Enum
 from langchain.agents import create_openai_tools_agent, AgentExecutor
 from langchain.tools import StructuredTool
 from datetime import datetime
+from langchain.output_parsers.openai_tools import JsonOutputKeyToolsParser
 
 
 load_dotenv()
@@ -22,6 +22,12 @@ class Category(Enum):
 
 llm = ChatOpenAI(model='gpt-4-turbo', model_kwargs={
     "response_format": {"type": "json_object"}}, temperature=0)
+
+parser = JsonOutputKeyToolsParser(key_name="observation")
+
+
+class CalendarAlarmFinalResponse(BaseModel):
+    displayText: str = Field(description="The final response to be displayed to the user")
 
 
 class CalendarAlarmResponse(BaseModel):
@@ -42,7 +48,6 @@ def create_alarm_readout(alarm_json: CalendarAlarmResponse):
     day_of_week = alarm_json.event_time.strftime('%A')
     time_of_day = alarm_json.event_time.strftime('%I:%M %p')
 
-    print("Test Enum: ", Category.ALWAYS)
     return f"{alarm_json.name} @ {time_of_day} on {day_of_week} {month} {day_number} #{alarm_json.category.name.lower()} [{alarm_json.lead_time}m]"
 
 
@@ -55,43 +60,30 @@ class CalendarAlarmService:
 
     def create_alarm_json(self, user_input: str):
 
-        systemPrompt = ("system", """You respond with JSON only. From the user_input you will extract the name (string) of the event, the category of one of the types "always | work | home" for the event (if category is unclear, default to "always"), lead_time (number) which is how long before the event I should be reminded, event_time (datetime) is when the event should actually happen, and creation_time of the call to the llm (currentDateTime) Your JSON response will only have the fields 'name', 'category', 'lead_time' (always expressed in terms of minutes. So 3 hours = 180 for example), 'event_time', and 'creation_time'.
+        input = {
+            "user_input": user_input,
+            "current_time": datetime.now().isoformat()
+        }
+
+        systemPrompt = [("system", """From the user_input you will extract the name (string) of the event, the category of one of the types "always | work | home" for the event (if category is unclear, default to "always"), lead_time (number) which is how long before the event I should be reminded, event_time (datetime) is when the event should actually happen, and creation_time of the call to the llm (currentDateTime) Your JSON response will only have the fields 'name', 'category', 'lead_time' (always expressed in terms of minutes. So 3 hours = 180 for example), 'event_time', and 'creation_time'.
                         {user_input}
                         {current_time}
-                        {agent_scratchpad}
-                        
-                        Finally, run the output through the tool attached to the agent to get the final response.""")
+                        Finally, run the output through the tool attached to the agent to get the final response."""),
+                        MessagesPlaceholder("agent_scratchpad")
+                        ]
 
-        prompt = ChatPromptTemplate.from_messages([systemPrompt])
-        print("Created Prompt")
+        prompt = ChatPromptTemplate.from_messages(systemPrompt)
 
         createCalendarReadout = StructuredTool.from_function(
             create_alarm_readout
-            # func=create_alarm_readout,
-            # args_schema=CalendarAlarmResponse,
-            # name="CalendarReadout",
-            # return_direct=True,
         )
-        print("Created createCalendarReadout")
 
         tools = [createCalendarReadout]
-        print("Created Tools")
 
         agent = create_openai_tools_agent(llm, tools, prompt)
-        print("Created AGENT")
 
-        print("INVOKED agent to get agentResponse2")
+        agent_executer = AgentExecutor(agent=agent, tools=tools, verbose=True, return_intermediate_steps=False, )  # type: ignore
 
-        agent_executer = AgentExecutor(agent=agent, tools=tools, verbose=True, return_intermediate_steps=True)  # type: ignore
-        print("Agent executer created")
-
-        print("BEFORE BEFORE response variable populated")
-
-        response = agent_executer.invoke({
-            "user_input": user_input,
-            "current_time": datetime.now().isoformat()
-        })
-
-        print("AFTER AFTER response variable populated")
+        response = agent_executer.invoke(input)
 
         return response
