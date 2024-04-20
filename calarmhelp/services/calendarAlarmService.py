@@ -49,7 +49,7 @@ def create_alarm_readout(alarm_json: CalendarAlarmResponse):
     day_number = alarm_json.event_time.strftime('%d')
     day_of_week = alarm_json.event_time.strftime('%A')
     time_of_day = alarm_json.event_time.strftime('%I:%M %p')
-    locationCondition = f"{('at ' + alarm_json.location) if alarm_json.location else ''}"
+    locationCondition = f"{(' at ' + alarm_json.location) if alarm_json.location else ''}"
 
     # Take care with format. Everything, even spacing - is intentional.
     return f"{alarm_json.name} @ {time_of_day}{locationCondition} on {day_of_week} {month} {day_number} #{alarm_json.category.name.lower()} [{alarm_json.lead_time}m]"
