@@ -72,6 +72,16 @@ class CalendarAlarmService:
         }
 
         systemPrompt = [("system", """From the user_input you will extract the name (string) of the event, the category of one of the types "always | work | home" for the event (if category is unclear, default to "always"), lead_time (number) which is how long before the event I should be reminded, event_time (datetime) is when the event should actually happen, 'event_time_end' (if not specified, always has the value of half an hour after the event_time), and creation_time of the call to the llm (currentDateTime), and location (as a string, only if clearly provided. Most of the time this should be an empty string. Location callouts are rare.), and an 'error' (boolean, only ever true if llm fails). Your JSON response will only have the fields 'name', 'category', 'lead_time' (always expressed in terms of minutes. So 3 hours = 180 for example), event_time_end, event_time', 'creation_time' (datetime object), 'location', and 'error'. Always use double quotes for keys and values in the JSON object you create.
+                         
+        Here is the structure of the JSON object you will return:
+        class CalendarAlarmResponse(BaseModel):
+        name: str = Field(description="Name of the event")
+        category: Category = Field(description="Category of the event")
+        lead_time: int = Field(description="How long before the event I should be reminded")
+        event_time: datetime = Field(description="When the event should actually happen")
+        event_time_end: datetime = Field(description="When the event should actually end")
+        location: str = Field(description="Location of event, if provided")
+        error: bool = Field(default=False, description="If there was an error in the input")
                         {user_input}
                         {current_time}
                         Finally, run the output through the tool attached to the agent to get the final response in a field called response. ALWAYS use the tool.
