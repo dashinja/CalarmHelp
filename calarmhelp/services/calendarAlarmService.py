@@ -92,13 +92,14 @@ class CalendarAlarmService:
         agent_executer = AgentExecutor(agent=agent, tools=tools, verbose=True, return_intermediate_steps=False, )  # type: ignore
 
         def getResponseAndValidate(input):
-            global evaluationCount; evaluationCount = 0
+            global evaluationCount
+            evaluationCount = 0
             response = agent_executer.invoke(input)
 
             parsedOutput = json.loads(response['output'])
 
             saved_schema = json.dumps({'json': {'name': 'Tell her I love her', 'category': 'always', 'lead_time': 120, 'event_time': '2024-04-25T08:00:00', 'event_time_end': '2024-04-25T08:30:00', 'creation_time': '2024-04-20T20:22:19.290603', 'location': 'Disney World', 'error': "false"}, 'response': 'Tell her I love her @ 08:00 AM at Disney World on Thursday April 25 #always [120m]'})
-                  
+
             examenResponse: Dict[str, bool] = evaluator.evaluate_strings(
                 prediction=parsedOutput, reference=saved_schema)
 
