@@ -21,6 +21,7 @@ SCOPES = ["https://www.googleapis.com/auth/calendar.readonly", "https://www.goog
 
 
 def googleCalendarServiceScript(user_input):
+    # For google credentials - this is the ONLY thing that worked: https://developers.google.com/calendar/api/quickstart/python
     """Shows basic usage of the Google Calendar API.
     Prints the start and name of the next 10 events on the user's calendar.
     """
@@ -44,6 +45,7 @@ def googleCalendarServiceScript(user_input):
             token.write(creds.to_json())
 
     try:
+        # see https://developers.google.com/calendar/api/v3/reference/events/insert
         service = build("calendar", "v3", credentials=creds)
 
         myEvent = {
