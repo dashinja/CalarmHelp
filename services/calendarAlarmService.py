@@ -1,4 +1,5 @@
 import json
+import pprint
 from typing import Dict
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -30,21 +31,22 @@ parser = JsonOutputKeyToolsParser(key_name="observation")
 evaluator = JsonSchemaEvaluator()
 
 
-class CalendarAlarmResponse(BaseModel):
+class CalendarAlarmFinalResponse(BaseModel):
     displayText: str = Field(description="The final response to be displayed to the user")
 
 
-class CalendarAlarmJson(BaseModel):
+class CalendarAlarmResponse(BaseModel):
     name: str = Field(description="Name of the event")
     category: Category = Field(description="Category of the event")
-    lead_time: int = Field(description="How long before the event I should be reminded")
-    event_time: datetime = Field(description="When the event should actually happen")
-    event_time_end: datetime = Field(description="When the event should actually end")
+    lead_time: int = Field(description="How long before the event I should be reminded. Defaults to 30 minutes if not provided.")
+    event_time: datetime = Field(description="When the event should actually happen. Always following the 'America/New_York' timezone.")
+    event_time_end: datetime = Field(description="When the event should actually end. Always following the 'America/New_York' timezone.")
     location: str = Field(description="Location of event, if provided")
-    error: bool = Field(default=False, description="If there was an error in the input")
+    error: bool = Field(default=False, description="If there was an error in the input then True. Otherwise, False.")
+    current_time: datetime = Field(description="The current time. Always following the 'America/New_York' timezone.")
 
 
-def create_alarm_readout(alarm_json: CalendarAlarmJson):
+def create_alarm_readout(alarm_json: CalendarAlarmResponse):
     """Provides the 'description' field for google calendar"""
 
     month = alarm_json.event_time.strftime('%B')
@@ -71,13 +73,23 @@ class CalendarAlarmService:
             "current_time": datetime.now().isoformat()
         }
 
-        systemPrompt = [("system", """From the user_input you will extract the name (string) of the event, the category of one of the types "always | work | home" for the event (if category is unclear, default to "always"), lead_time (number) which is how long before the event I should be reminded, event_time (datetime) is when the event should actually happen, 'event_time_end' (if not specified, always has the value of half an hour after the event_time), and creation_time of the call to the llm (currentDateTime), and location (as a string, only if clearly provided. Most of the time this should be an empty string. Location callouts are rare.), and an 'error' (boolean, only ever true if llm fails). Your JSON response will only have the fields 'name', 'category', 'lead_time' (always expressed in terms of minutes. So 3 hours = 180 for example), event_time_end, event_time', 'creation_time' (datetime object), 'location', and 'error'. Always use double quotes for keys and values in the JSON object you create.
-                        {user_input}
-                        {current_time}
-                        Finally, run the output through the tool attached to the agent to get the final response in a field called response. ALWAYS use the tool.
-                        Return a json object that has a field for the final response, as well as a field for the json."""),
-                        MessagesPlaceholder("agent_scratchpad")
-                        ]
+        systemPrompt = [("system", """
+        From the user_input you will extract the name (string) of the event, the category of one of the types "always | work | home" for the event (if category is unclear, default to "always"), lead_time (number) which is how long before the event I should be reminded, event_time (datetime) is when the event should actually happen, 'event_time_end' (if not specified, always has the value of half an hour after the event_time), and creation_time of the call to the llm (currentDateTime), and location (as a string, only if clearly provided. Most of the time this should be an empty string. Location callouts are rare.), and an 'error' (boolean, only ever true if llm fails). Your JSON response will only have the fields 'name', 'category', 'lead_time' (always expressed in terms of minutes. So 3 hours = 180 for example - and if lead_time is not specified, defaults to 30), event_time_end, event_time', 'creation_time' (datetime object), 'location', and 'error'. Always use double quotes for keys and values in the JSON object you create.
+        Do not create events that are in the past. If a time is given, say 8AM but the current time is 9AM - assume the time given is for the future.                 
+        name: str = Field(description="Name of the event")
+        category: Category = Field(description="Category of the event")
+        lead_time: int = Field(description="How long before the event I should be reminded. Defaults to 30 minutes if not provided.")
+        event_time: datetime = Field(description="When the event should actually happen. Always following the 'America/New_York' timezone.")
+        event_time_end: datetime = Field(description="When the event should actually end. Always following the 'America/New_York' timezone.")
+        location: str = Field(description="Location of event, if provided")
+        error: bool = Field(default=False, description="If there was an error in the input then True. Otherwise, False.")
+        current_time: datetime = Field(description="The current time. Always following the 'America/New_York' timezone.")
+        {user_input}
+        {current_time}
+        Finally, run the output through the tool attached to the agent to get the final response in a field called response. ALWAYS use the tool.
+        Return a json object that has a field for the final response, as well as a field for the json."""),
+        MessagesPlaceholder("agent_scratchpad")
+        ]
 
         prompt = ChatPromptTemplate.from_messages(systemPrompt)
 
@@ -104,12 +116,12 @@ class CalendarAlarmService:
                 prediction=parsedOutput, reference=saved_schema)
 
             if examenResponse['score'] is True:
-                return response
+                return response['output']
             elif evaluationCount < 3:
                 evaluationCount += 1
                 return getResponseAndValidate(input)
             else:
-                return CalendarAlarmJson(
+                return CalendarAlarmResponse(
                     error=True,
                     # create empty responses for the remaining fields
                     name="",
@@ -118,6 +130,8 @@ class CalendarAlarmService:
                     event_time=datetime.now(),
                     event_time_end=datetime.now(),
                     location="",
+                    current_time=datetime.now()
+
                 )
 
         return getResponseAndValidate(input)
