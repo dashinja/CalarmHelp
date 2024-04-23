@@ -6,9 +6,10 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from services.calendarAlarmService import CalendarAlarmResponse
 from pydantic.v1 import BaseModel
 from pydantic import Field
+
+from calarmhelp.services.calendarAlarmService import CalendarAlarmResponse
 
 
 class GoogleCalendarInfoInput(BaseModel):
@@ -68,7 +69,7 @@ def googleCalendarServiceScript(user_input):
             print("Event Creation Failed")
             return
         else:
-            return {"new_event_created": created_event['summary']}
+            return created_event['summary']
 
     except HttpError as error:
         print(f"An error occurred: {error}")
