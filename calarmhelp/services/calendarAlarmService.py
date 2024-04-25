@@ -14,36 +14,16 @@ from datetime import datetime
 from langchain.output_parsers.openai_tools import JsonOutputKeyToolsParser
 from langchain.evaluation import JsonSchemaEvaluator
 
+from calarmhelp.services.util.util import CalendarAlarmResponse, Category, GoogleCalendarInfoInput
+
 
 load_dotenv()
-
-
-class Category(Enum):
-    ALWAYS = "always"
-    WORK = "work"
-    HOME = "home"
 
 
 llm = ChatOpenAI(model='gpt-4-turbo', temperature=0)
 
 parser = JsonOutputKeyToolsParser(key_name="observation")
 evaluator = JsonSchemaEvaluator()
-
-
-class CalendarAlarmFinalResponse(BaseModel):
-    displayText: str = Field(description="The final response to be displayed to the user")
-
-
-class CalendarAlarmResponse(BaseModel):
-    name: str = Field(description="Name of the event")
-    category: Category = Field(description="Category of the event")
-    lead_time: int = Field(description="How long before the event I should be reminded. Defaults to 30 minutes if not provided.")
-    event_time: datetime = Field(description="When the event should actually happen. Always following the 'America/New_York' timezone.")
-    event_time_end: datetime = Field(description="When the event should actually end. Always following the 'America/New_York' timezone.")
-    location: str = Field(description="Location of event, if provided")
-    error: bool = Field(default=False, description="If there was an error in the input then True. Otherwise, False.")
-    current_time: datetime = Field(description="The current time. Always following the 'America/New_York' timezone.")
-    response: Optional[str] = Field(description="The final response to be displayed to the user. This can only be populated after the tool is called. The output of the tool goes here")
 
 
 def create_alarm_readout(alarm_json: CalendarAlarmResponse):
@@ -66,7 +46,7 @@ class CalendarAlarmService:
         super(CalendarAlarmService, self).__init__()
         print("INITIALIZED")
 
-    def create_alarm_json(self, user_input: str):
+    def create_alarm_json(self, user_input: str) -> GoogleCalendarInfoInput:
 
         input = {
             "user_input": user_input,
@@ -120,7 +100,8 @@ class CalendarAlarmService:
         {user_input}
         {current_time}
         Finally, run the output through the tool attached to the agent to get the final response in a field called response. ALWAYS use the tool.
-        Return a json object that has a field for the final response, as well as a field for the json."""
+        Return a json object that has a field for the final response, as well as a field for the json.
+        Do not respond with any explanations or other information. Just the json object."""
 
         systemPrompt_gpt_2 = """Given the current time provided as `{current_time}` and an event description `{user_input}`, your role is to process this information to generate event details in a structured format. You must ensure the event is scheduled for the future, considering `{current_time}`. Utilize the tool `create_alarm_readout` to finalize the event details. 
 
@@ -217,7 +198,7 @@ Ensure all provided details are based on `{user_input}` and `{current_time}`, an
     current_time: datetime = Field(description="The current time. Always following the 'America/New_York' timezone.")
     response: Optional[str] = Field(description="The final response to be displayed to the user. This can only be populated after the tool is called. The output of the tool goes here")
 
-    The 'output' field should contain the final python dictionary in a form immediately usable in a Python codebase. It should not contain other code, just the output reading the dictionary. The 'response' field should contain the final response to be displayed to the user. Ensure all details are accurate and complete based on the input and current time provided.
+    The 'output' field should contain the final python dictionary in a form immediately usable in a Python codebase. It should not contain other code, just the output reading the dictionary. The 'response' field should contain the final response to be displayed to the user. Ensure all details are accurate and complete based on the input and current time provided. No explanation is needed, just the final output. It should be dictionary without any '```' nor '\n' nor other formatting.
 """
         systemPrompt = [("system", systemPrompt_original),
                         MessagesPlaceholder("agent_scratchpad")
@@ -239,22 +220,35 @@ Ensure all provided details are based on `{user_input}` and `{current_time}`, an
             global evaluationCount
             evaluationCount = 0
             response = agent_executer.invoke(input)
+
             print("RESPONSE::::::")
             pprint.pprint(response)
             parsedOutput = json.loads(response['output'])
+            # parsedOutput = response['output']
+            print("PARSED OUTPUT::::::")
+            pprint.pprint(parsedOutput)
 
-            saved_schema = json.dumps({'json': {'name': 'Tell her I love her', 'category': 'always', 'lead_time': 120, 'event_time': '2024-04-25T08:00:00', 'event_time_end': '2024-04-25T08:30:00', 'creation_time': '2024-04-20T20:22:19.290603', 'location': 'Disney World', 'error': "false"}, 'response': 'Tell her I love her @ 08:00 AM at Disney World on Thursday April 25 #always [120m]'})
+            saved_schema = {'theJson': {'name': 'string', 'category': 'string', 'lead_time': 'integer', 'event_time': 'string', 'event_time_end': 'string', 'creation_time': 'string', 'location': 'string', 'error': "string"}, 'response': 'string'}
+
+            print("SAVED SCHEMA::::::")
+            # pprint.pprint(json.loads(saved_schema))
+            pprint.pprint(saved_schema)
 
             examenResponse: Dict[str, bool] = evaluator.evaluate_strings(
-                prediction=parsedOutput, reference=saved_schema)
+                prediction=parsedOutput, reference=json.dumps(saved_schema))
 
-            if examenResponse['score'] is True:
-                return response['output']
-            elif evaluationCount < 3:
+            if examenResponse['score'] is False and evaluationCount <= 3:
                 evaluationCount += 1
+                print("examenResponse: ")
+                pprint.pprint(examenResponse)
                 return getResponseAndValidate(input)
-            else:
-                return CalendarAlarmResponse(
+            
+
+
+            elif evaluationCount > 3:
+                return GoogleCalendarInfoInput(
+                    response = "",
+                    theJson = CalendarAlarmResponse(
                     error=True,
                     # create empty responses for the remaining fields
                     name="",
@@ -265,7 +259,39 @@ Ensure all provided details are based on `{user_input}` and `{current_time}`, an
                     location="",
                     current_time=datetime.now(),
                     response=response['output']
+                ))
+            else:
+                print("before attempt to coerse into GoogleCalendarInfoInput")
+                pprint.pprint(response)
 
+                output = json.loads(json.dumps(response['output']))
+                # output = json.dumps(response['output'])
+
+                print("the output is:")
+                pprint.pprint(output)
+
+                # print("parse output['json']")
+                # pprint.pprint(json.dumps(output['json']))
+
+                # testOutput = json.loads(output['json'])
+
+                testOutput = json.loads(output)
+                print("testOutput")
+                print("typeof testOutput: ", type(testOutput))
+                pprint.pprint(testOutput)
+
+                theJson = json.loads(output)
+                print("theJson")
+                pprint.pprint(theJson)
+
+
+                parsedOutputResponseValue = json.loads(output)
+                # testResponseValue = 
+                responseValue = GoogleCalendarInfoInput(
+                    response = parsedOutputResponseValue['response'],
+                    theJson = parsedOutputResponseValue['json']
                 )
+                return responseValue
 
-        return getResponseAndValidate(input)
+        final = getResponseAndValidate(input)
+        return final
