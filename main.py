@@ -1,5 +1,6 @@
 import json
 import pprint
+from typing import Dict
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -14,6 +15,13 @@ app = FastAPI()
 class CreateAlarmRequest(BaseModel):
     input: str
 
+@app.get("/")
+async def root():
+    return {"message": "Hello World"}
+
+@app.post("/")
+async def post_root(user_input):
+    return {user_input}
 
 @app.post("/create_alarm/")
 async def create_alarm(user_input: CreateAlarmRequest):
