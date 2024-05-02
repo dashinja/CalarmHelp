@@ -237,6 +237,9 @@ Ensure all provided details are based on `{user_input}` and `{current_time}`, an
             examenResponse: Dict[str, bool] = evaluator.evaluate_strings(
                 prediction=parsedOutput, reference=json.dumps(saved_schema))
 
+            print("examenResponse: ")
+            pprint.pprint(examenResponse)
+            
             if examenResponse['score'] is False and evaluationCount <= 3:
                 evaluationCount += 1
                 print("examenResponse: ")

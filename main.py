@@ -8,22 +8,35 @@ from pydantic import BaseModel
 from calarmhelp.services.calendarAlarmService import CalendarAlarmService
 from calarmhelp.services.googleCalendarService import googleCalendarServiceScript
 from calarmhelp.services.util.util import GoogleCalendarInfoInput
+from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI()
+origins = ["*"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
 
 
 class CreateAlarmRequest(BaseModel):
     input: str
 
+
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
+
 
 @app.post("/")
 async def post_root(user_input):
     return {user_input}
 
-@app.post("/create_alarm/")
+
+@app.post("/create_alarm")
 async def create_alarm(user_input: CreateAlarmRequest):
     print("Calling Calendar Alarm Service")
     calendarService = CalendarAlarmService()
