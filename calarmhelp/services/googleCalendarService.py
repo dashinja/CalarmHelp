@@ -52,8 +52,8 @@ def googleCalendarServiceScript(whole_user_input: GoogleCalendarInfoInput):
         # see https://developers.google.com/calendar/api/v3/reference/events/insert
         service = build("calendar", "v3", credentials=creds)
 
-        print("user_input.json")
-        pprint.pprint(user_input)
+        # print("user_input.json====")
+        # pprint.pprint(user_input)
 
         myEvent = {
             'summary': whole_user_input.response,
@@ -69,8 +69,8 @@ def googleCalendarServiceScript(whole_user_input: GoogleCalendarInfoInput):
 
         }
 
-        print("The value you want to see user_input")
-        pprint.pprint(user_input)
+        # print("The value you want to see user_input====")
+        # pprint.pprint(user_input)
 
         # quick_created_event = service.events().quickadd(calendarid='primary', text=whole_user_input.response).execute()
         # if not quick_created_event:
@@ -79,15 +79,15 @@ def googleCalendarServiceScript(whole_user_input: GoogleCalendarInfoInput):
         # else:
         #     return quick_created_event['summary']
         
-        print("myEvent: ")
-        pprint.pprint(myEvent)
+        # print("myEvent====: ")
+        # pprint.pprint(myEvent)
 
         created_event = service.events().insert(calendarId='primary', body=myEvent).execute()
         if not created_event:
-            print("Event Creation Failed")
+            print("====Event Creation Failed====")
             return
         else:
             return created_event['summary']
         #
     except HttpError as error:
-        print(f"An error occurred: {error}")
+        print(f"====An error occurred: {error}====")
