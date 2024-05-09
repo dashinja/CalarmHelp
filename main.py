@@ -1,27 +1,18 @@
-import json
-import pprint
-from typing import Dict, Literal
-import typing
+import os
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse, JSONResponse
-from fastapi.concurrency import run_until_first_complete
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from calarmhelp.services.calendarAlarmService import CalendarAlarmService
-from calarmhelp.services.googleCalendarService import googleCalendarServiceScript
-from calarmhelp.services.util.llmSetup import ChatBot, ChatBotStreamer
-from calarmhelp.services.util.util import GoogleCalendarInfoInput
+from calarmhelp.services.googleCalendarService import GoogleCalendarServiceScript
 from fastapi.middleware.cors import CORSMiddleware
 
-from langchain.schema import SystemMessage, ChatMessage, BaseMessage, AIMessage
-
-import asyncio
-from typing import Callable, Generator
-
+load_dotenv()
 
 app = FastAPI()
-origins = ["*"]
+origins = [os.environ['ORIGINS']]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -37,60 +28,50 @@ class CreateAlarmRequest(BaseModel):
 
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    """
+    Root endpoint of the API.
+
+    Returns:
+        dict: A dictionary with a welcome message.
+    """
+    return {"message": "Welcome to CalarmHelp"}
 
 
 @app.post("/")
 async def post_root(user_input):
-    return {user_input}
+    """
+    Endpoint to echo the user input.
+
+    Args:
+        user_input: The input provided by the user.
+
+    Returns:
+        dict: A dictionary with the echoed input.
+    """
+    return {"echo": user_input}
 
 
 @app.post("/create_alarm")
 async def create_alarm(user_input: CreateAlarmRequest):
-    print("=====Calling Calendar Alarm Service=====\n\n")
-    
-    # stream = await ChatBotStreamer.ainvoke(input="AI Saying: Calling Calendar Alarm Service")
-    # print("stream")
-    # pprint.pprint(stream)
-    
-    # stream2 = ChatBotStreamer.astream(input="You are an AI Announcer - simply return the following announcement: 'Calling Calendar Alarm Service'")
-    # print("stream2")
-    # pprint.pprint(stream2)
-    
-    calendarService = CalendarAlarmService()
-    calendarServiceResponse = await calendarService.create_alarm_json(user_input.input)
+    """
+    Endpoint to create an alarm.
 
-    # print("Parsing Calendar Alarm Service Response")
-    # parsedCalendarServiceResponse = json.loads(calendarServiceResponse)  # type: ignore
+    Args:
+        user_input (CreateAlarmRequest): The input provided by the user.
 
-    # **
-    # print("=====CalendarServiceResponse Shown:::::::=====\n\n")
-    # pprint.pprint(calendarServiceResponse)
+    Returns:
+        StreamingResponse: A streaming response with the alarm information in JSON format.
+    """
+    print("=====Calling Calendar Alarm Service\n")
+    CalendarService = CalendarAlarmService()
+    calendar_service_response = await CalendarService.create_alarm_json(user_input.input)
 
-    print("=====Passing to Google Calendar Service=====\n\n")
+    print("=====Passing to Google Calendar Service\n")
+    GoogleCalendarServiceScript(calendar_service_response)
 
-    # googleCalendarInput = GoogleCalendarInfoInput(
-    #     response=calendarServiceResponse.response,
-    #     json=calendarServiceResponse.json
-    # )
-
-    # endgame = googleCalendarServiceScript(googleCalendarInput)
-    # intermediate = GoogleCalendarInfoInput(calendarServiceResponse)
-    endgame = googleCalendarServiceScript(calendarServiceResponse)
-
-    response = calendarServiceResponse
-    
-    print("=====Returning from Google Calendar Service=====\n\n")
-    
-    # print("response before done")
-    # pprint.pprint(response)
-    
-    response = json.dumps(response.json())
-    
+    print("=====Returning from Google Calendar Service\n")
     return StreamingResponse(
-        content = response,  # Use the appropriate content from the GoogleCalendarInfoInput object
-        status_code=200,
+        content=calendar_service_response.to_dict(),
+        status_code=201,
         media_type="application/json",
-        
     )
-    # return response
