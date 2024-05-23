@@ -32,7 +32,7 @@
 6. Add the following environment variables, with values, to the `.env` file.
 
   ```.env     
-    OPENAI_API_KEY=
+    OPENAI_API_KEY=<Refer to OpenAI Docs>
     export LANGCHAIN_TRACING_V2=<Refer to LangSmith Docs>
     export LANGCHAIN_API_KEY=<Refer to LangSmith Docs>
     ORIGINS=<A string which defines origins for CORS middleware>
