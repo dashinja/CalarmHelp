@@ -1,0 +1,45 @@
+{% if properties_to_validate %}
+    Here was the json you were provided:
+    {{input.user_input}}
+    {{input.current_time}}
+
+    Here are the properties you previously extracted:
+    {{properties_to_validate[0]}}
+    Are these the correct properties?
+    Things to check for:
+    - Properties should be exactly one of these: name, category, lead_time, event_time, event_time_end, location, error, current_time
+    - Properties should be in the correct format
+    - There should be no extra properties
+    - There should be no missing properties
+    - There should be no duplicate properties
+    If you are done say 'DONE' and return your new json with appropriate properties in the next line.
+    If not, simply return the best properties you come up with.
+    JSON:
+    {# The following properties were not found in the json:
+    {% for property in properties_to_validate %}
+        {{property}}
+    {% endfor %} #}
+{% else%}
+    Extract entities from the following context.
+
+    Context: {{input.user_input}}
+    Current Time: {{input.current_time}}
+    The entities should be presented as key-value pairs in a JSON object.
+
+    Example:
+    {
+        "input": {{input.user_input}},
+        "output": {
+            "name": "Winning Calendar event",
+            "category": "always",
+            "lead_time": 5,
+            "event_time": "2024-05-05T10:30:00-04:00",
+            "event_time_end": "2024-05-05T10:45:00-04:00",
+            "location": "Court House",
+            "error": false,
+            "current_time": {{input.current_time}}
+            }
+    }
+    If there are no possibilities for a particular category, return an empty string for this category.
+    JSON:
+{% endif %}

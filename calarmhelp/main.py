@@ -5,13 +5,16 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from calarmhelp.services.calendarAlarmService import CalendarAlarmService
+from calarmhelp.services.calendarAlarmService import CalendarAlarmService, CalendarAlarmServiceHaystack
 from calarmhelp.services.googleCalendarService import GoogleCalendarServiceScript
 from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
-app = FastAPI()
+app = FastAPI(
+    docs_url='/'
+)
+
 origins = [os.environ['ORIGINS']]
 app.add_middleware(
     CORSMiddleware,
@@ -26,15 +29,15 @@ class CreateAlarmRequest(BaseModel):
     input: str
 
 
-@app.get("/")
-async def root():
-    """
-    Root endpoint of the API.
+# @app.get("/")
+# async def root():
+#     """
+#     Root endpoint of the API.
 
-    Returns:
-        dict: A dictionary with a welcome message.
-    """
-    return {"message": "Welcome to CalarmHelp"}
+#     Returns:
+#         dict: A dictionary with a welcome message.
+#     """
+#     return {"message": "Welcome to CalarmHelp"}
 
 
 @app.post("/")
@@ -52,7 +55,7 @@ async def post_root(user_input):
 
 
 @app.post("/create_alarm")
-async def create_alarm(user_input: CreateAlarmRequest):
+async def create_alarm(request: CreateAlarmRequest):
     """
     Endpoint to create an alarm.
 
@@ -63,8 +66,12 @@ async def create_alarm(user_input: CreateAlarmRequest):
         StreamingResponse: A streaming response with the alarm information in JSON format.
     """
     print("=====Calling Calendar Alarm Service\n")
-    CalendarService = CalendarAlarmService()
-    calendar_service_response = await CalendarService.create_alarm_json(user_input.input)
+    # CalendarService = CalendarAlarmService()
+    # calendar_service_response = await CalendarService.create_alarm_json(user_input.input)
+
+    CalendarService = CalendarAlarmServiceHaystack()
+    calendar_service_response = CalendarService.run(input=request.input)
+    print("calendar_service_response: ", calendar_service_response)
 
     print("=====Passing to Google Calendar Service\n")
     GoogleCalendarServiceScript(calendar_service_response)
@@ -75,3 +82,4 @@ async def create_alarm(user_input: CreateAlarmRequest):
         status_code=201,
         media_type="application/json",
     )
+

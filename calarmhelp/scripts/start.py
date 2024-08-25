@@ -7,7 +7,7 @@ PORT = int(os.getenv("PORT", 8000))
 
 
 def run():
-    command = ["uvicorn", "main:app", "--reload", "--host", "0.0.0.0", "--port", str(PORT)]
+    command = ["uvicorn", "calarmhelp.main:app", "--reload", "--host", "0.0.0.0", "--port", str(PORT)]
     subprocess.run(command)
 
 

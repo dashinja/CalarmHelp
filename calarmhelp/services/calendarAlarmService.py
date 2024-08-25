@@ -1,6 +1,8 @@
 import json
+import os
 import pprint
 from typing import Dict
+from haystack import Pipeline
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, FewShotChatMessagePromptTemplate
 
 from langchain.agents import create_openai_tools_agent, AgentExecutor
@@ -12,6 +14,18 @@ from langchain.evaluation import JsonSchemaEvaluator
 from calarmhelp.services.util.constants import Examples, CalarmHelpPromptTemplate
 from calarmhelp.services.util.llmSetup import ChatBotStreamer as llm
 from calarmhelp.services.util.util import CalendarAlarmResponse, Category, GoogleCalendarInfoInput
+
+from haystack.core.component import component
+from haystack.components.generators import OpenAIGenerator
+from haystack.components.builders import PromptBuilder
+from jinja2 import Environment, FileSystemLoader
+
+from ..templates.googleCalendarFeeder import google_calendar_feeder
+
+template_dir = os.path.join(os.path.dirname(__file__), '../templates')
+env = Environment(loader=FileSystemLoader(template_dir))
+template = env.get_template('googleCalendarFeeder.jinja')
+
 
 parser = JsonOutputKeyToolsParser(key_name="observation")
 evaluator = JsonSchemaEvaluator()
@@ -58,6 +72,62 @@ def create_alarm_readout(input):
 
     # Take care with format. Everything, even spacing - is intentional.
     return f"{input.name} @ {time_of_day}{locationCondition} on {day_of_week} {month} {day_number} #{input.category.name.lower()} [{input.lead_time}m]"
+
+@component
+class JSONValidator:
+    @component.output_types(properties_to_validate=list[str], json=str)
+    def run(self, properties: list[str]):
+        if 'DONE' in properties[0]:
+            return {"json": properties[0].replace('Done', '')}
+        else:
+            return {"properties_to_validate": properties[0]}
+        
+@component
+class CalendarAlarmServiceHaystack:
+
+    def __init__(self):
+        self.generator = OpenAIGenerator()
+        self.pipeline = Pipeline()
+        
+        
+    @component.output_types(output=GoogleCalendarInfoInput)
+    def run(self, input: str) -> GoogleCalendarInfoInput:
+        modified_input = {
+            "user_input": input,
+            "current_time": datetime.now().isoformat()
+        }
+    
+        # rendered_template = template.render(input=modified_input)
+        # print("rendered_template: ", rendered_template)
+        prompt_builder = PromptBuilder(template=google_calendar_feeder)
+        generator = OpenAIGenerator()
+        json_validator = JSONValidator()
+        
+        self.pipeline.add_component("prompt_builder", prompt_builder)
+        self.pipeline.add_component("generator", generator)
+        self.pipeline.add_component("validator", json_validator)
+
+        self.pipeline.connect("prompt_builder.prompt", "generator.prompt")
+        self.pipeline.connect("generator.replies", "validator.properties")
+        self.pipeline.connect("validator.properties_to_validate", "prompt_builder.properties_to_validate")
+
+        results = self.pipeline.run(data={
+            "prompt_builder": {"input": modified_input},
+        })
+
+        jsonOutput = results['validator']['json'].replace('DONE', '')
+
+        # print("results: ", results['generator']['validator']['json'])
+        print("jsonOutPut: ", jsonOutput)
+        
+        realJson = json.loads(jsonOutput)
+        
+        print("realJson: ", realJson)
+        return GoogleCalendarInfoInput(
+            response = create_alarm_readout(realJson),
+            theJson = CalendarAlarmResponse.validate(realJson)
+        )
+        
 
 
 class CalendarAlarmService:
