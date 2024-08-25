@@ -26,7 +26,6 @@ template_dir = os.path.join(os.path.dirname(__file__), '../templates')
 env = Environment(loader=FileSystemLoader(template_dir))
 template = env.get_template('googleCalendarFeeder.jinja')
 
-
 parser = JsonOutputKeyToolsParser(key_name="observation")
 evaluator = JsonSchemaEvaluator()
 
@@ -50,7 +49,6 @@ calendar_alarm_service_final_prompt = ChatPromptTemplate.from_messages([
     *calendar_alarm_service_system_prompt,
     calendar_alarm_service_few_shot_prompt,
 ])
-
 
 def create_alarm_readout(input):
     """Provides the 'description' field for google calendar
@@ -83,11 +81,35 @@ class JSONValidator:
             return {"properties_to_validate": properties[0]}
         
 @component
-class CalendarAlarmServiceHaystack:
+class CalendarAlarmServicePipeline:
+    """
+    Pipeline for processing calendar alarm service. Requires OPENAI_API_KEY in a `.env` file in root directory to function properly.
+    
+    #### Attributes:
+    ```
+    _generator (OpenAIGenerator):
+    ```The OpenAIGenerator instance.
+    ```
+    _pipeline (Pipeline):
+    ```The Pipeline instance.
+    #### Methods:
+        ```
+        run(input: str) -> GoogleCalendarInfoInput:
+        ```
+        Runs the pipeline to process the input and returns `GoogleCalendarInfoInput`.
+        
+        Args:
+        ```
+        input (str):
+        ``` The input string.
+        Returns:
+            GoogleCalendarInfoInput: The processed GoogleCalendarInfoInput.
+    """
+
 
     def __init__(self):
-        self.generator = OpenAIGenerator()
-        self.pipeline = Pipeline()
+        self._generator = OpenAIGenerator()
+        self._pipeline = Pipeline(max_loops_allowed=10)
         
         
     @component.output_types(output=GoogleCalendarInfoInput)
@@ -97,32 +119,26 @@ class CalendarAlarmServiceHaystack:
             "current_time": datetime.now().isoformat()
         }
     
-        # rendered_template = template.render(input=modified_input)
-        # print("rendered_template: ", rendered_template)
-        prompt_builder = PromptBuilder(template=google_calendar_feeder)
+        prompt_builder = PromptBuilder(template=google_calendar_feeder, )
         generator = OpenAIGenerator()
         json_validator = JSONValidator()
         
-        self.pipeline.add_component("prompt_builder", prompt_builder)
-        self.pipeline.add_component("generator", generator)
-        self.pipeline.add_component("validator", json_validator)
+        self._pipeline.add_component("prompt_builder", prompt_builder)
+        self._pipeline.add_component("generator", generator)
+        self._pipeline.add_component("validator", json_validator)
 
-        self.pipeline.connect("prompt_builder.prompt", "generator.prompt")
-        self.pipeline.connect("generator.replies", "validator.properties")
-        self.pipeline.connect("validator.properties_to_validate", "prompt_builder.properties_to_validate")
+        self._pipeline.connect("prompt_builder.prompt", "generator.prompt")
+        self._pipeline.connect("generator.replies", "validator.properties")
+        self._pipeline.connect("validator.properties_to_validate", "prompt_builder.properties_to_validate")
 
-        results = self.pipeline.run(data={
+        results = self._pipeline.run(data={
             "prompt_builder": {"input": modified_input},
         })
 
         jsonOutput = results['validator']['json'].replace('DONE', '')
 
-        # print("results: ", results['generator']['validator']['json'])
-        print("jsonOutPut: ", jsonOutput)
-        
         realJson = json.loads(jsonOutput)
         
-        print("realJson: ", realJson)
         return GoogleCalendarInfoInput(
             response = create_alarm_readout(realJson),
             theJson = CalendarAlarmResponse.validate(realJson)
