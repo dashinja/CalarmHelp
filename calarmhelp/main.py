@@ -1,8 +1,7 @@
 import os
-
+import logging
 from dotenv import load_dotenv
-from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, status
 from pydantic import BaseModel
 
 from calarmhelp.services.calendarAlarmService import CalendarAlarmServicePipeline
@@ -11,11 +10,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
-app = FastAPI(
-    docs_url='/'
-)
 
-origins = [os.environ['ORIGINS']]
+logging.basicConfig(
+    format="%(levelname)s - %(name)s -  %(message)s", level=logging.WARNING
+)
+logging.getLogger("haystack").setLevel(logging.DEBUG)
+
+app = FastAPI(docs_url="/")
+
+origins = [os.environ["ORIGINS"]]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -29,32 +32,7 @@ class CreateAlarmRequest(BaseModel):
     input: str
 
 
-# @app.get("/")
-# async def root():
-#     """
-#     Root endpoint of the API.
-
-#     Returns:
-#         dict: A dictionary with a welcome message.
-#     """
-#     return {"message": "Welcome to CalarmHelp"}
-
-
-@app.post("/")
-async def post_root(user_input):
-    """
-    Endpoint to echo the user input.
-
-    Args:
-        user_input: The input provided by the user.
-
-    Returns:
-        dict: A dictionary with the echoed input.
-    """
-    return {"echo": user_input}
-
-
-@app.post("/create_alarm")
+@app.post("/create_alarm", status_code=status.HTTP_201_CREATED)
 async def create_alarm(request: CreateAlarmRequest):
     """
     Endpoint to create an alarm.
@@ -73,9 +51,4 @@ async def create_alarm(request: CreateAlarmRequest):
     GoogleCalendarServiceScript(calendar_service_response)
 
     print("=====Returning from Google Calendar Service\n")
-    return StreamingResponse(
-        content=calendar_service_response.to_dict(),
-        status_code=201,
-        media_type="application/json",
-    )
-
+    return calendar_service_response.to_dict()

@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import os.path
 
 from google.auth.exceptions import RefreshError
@@ -11,7 +12,10 @@ from calarmhelp.services.util.util import GoogleCalendarInfoInput
 
 
 # If modifying these scopes, delete the file token.json.
-SCOPES = ["https://www.googleapis.com/auth/calendar.readonly", "https://www.googleapis.com/auth/calendar"]
+SCOPES = [
+    "https://www.googleapis.com/auth/calendar.readonly",
+    "https://www.googleapis.com/auth/calendar",
+]
 
 
 def GoogleCalendarServiceScript(whole_user_input: GoogleCalendarInfoInput):
@@ -38,9 +42,7 @@ def GoogleCalendarServiceScript(whole_user_input: GoogleCalendarInfoInput):
             except RefreshError:
                 creds = None
         if not creds:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                "credentials.json", SCOPES
-            )
+            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
             creds = flow.run_local_server(port=0)
             # Save the credentials for the next run
             with open("token.json", "w") as token:
@@ -51,24 +53,25 @@ def GoogleCalendarServiceScript(whole_user_input: GoogleCalendarInfoInput):
         service = build("calendar", "v3", credentials=creds)
 
         myEvent = {
-            'summary': whole_user_input.response,
-            'location': user_input.location,
-            'start': {
-                'dateTime': user_input.event_time.isoformat(),
-                'timeZone': 'America/New_York'
+            "summary": whole_user_input.response,
+            "location": user_input.location,
+            "start": {
+                "dateTime": user_input.event_time.isoformat(),
+                "timeZone": "America/New_York",
             },
-            'end': {
-                'dateTime': user_input.event_time_end.isoformat(),
-                'timeZone': 'America/New_York'
+            "end": {
+                "dateTime": user_input.event_time_end.isoformat(),
+                "timeZone": "America/New_York",
             },
-
         }
 
-        created_event = service.events().insert(calendarId='primary', body=myEvent).execute()
+        created_event = (
+            service.events().insert(calendarId="primary", body=myEvent).execute()
+        )
         if not created_event:
             print("====Event Creation Failed")
             return
         else:
-            return created_event['summary']
+            return created_event["summary"]
     except HttpError as error:
         print(f"====An error occurred: {error}")
