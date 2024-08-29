@@ -1,63 +1,18 @@
-import json
-import os
-import pprint
-from typing import Dict
 from haystack import Pipeline
-from langchain_core.prompts import (
-    ChatPromptTemplate,
-    MessagesPlaceholder,
-    FewShotChatMessagePromptTemplate,
-)
 
-from langchain.agents import create_openai_tools_agent, AgentExecutor
-from langchain.tools import StructuredTool
-from datetime import datetime, timedelta
-from langchain.output_parsers.openai_tools import JsonOutputKeyToolsParser
-from langchain.evaluation import JsonSchemaEvaluator
+from datetime import datetime
 
-from calarmhelp.services.util.constants import Examples, CalarmHelpPromptTemplate
-from calarmhelp.services.util.llmSetup import ChatBotStreamer as llm
 from calarmhelp.services.util.util import (
     CalendarAlarmResponse,
-    Category,
     GoogleCalendarInfoInput,
 )
 
 from haystack.core.component import component
 from haystack.components.generators import OpenAIGenerator
 from haystack.components.builders import PromptBuilder
-from jinja2 import Environment, FileSystemLoader
 
 from ..templates.googleCalendarFeeder import (
-    google_calendar_feeder,
     google_calendar_feeder2,
-)
-
-template_dir = os.path.join(os.path.dirname(__file__), "../templates")
-env = Environment(loader=FileSystemLoader(template_dir))
-template = env.get_template("googleCalendarFeeder.jinja")
-
-parser = JsonOutputKeyToolsParser(key_name="observation")
-evaluator = JsonSchemaEvaluator()
-
-calendar_alarm_service_system_prompt = [
-    ("system", CalarmHelpPromptTemplate),
-    MessagesPlaceholder("agent_scratchpad"),
-]
-
-calendar_alarm_service_example_prompt = ChatPromptTemplate.from_messages(
-    [("human", "{input}"), ("ai", "{output}")]
-)
-
-calendar_alarm_service_few_shot_prompt = FewShotChatMessagePromptTemplate(
-    example_prompt=calendar_alarm_service_example_prompt, examples=Examples
-)
-
-calendar_alarm_service_final_prompt = ChatPromptTemplate.from_messages(
-    [
-        *calendar_alarm_service_system_prompt,
-        calendar_alarm_service_few_shot_prompt,
-    ]
 )
 
 
@@ -70,8 +25,6 @@ def create_alarm_readout(input: CalendarAlarmResponse) -> str:
     Returns:
         str: A string that describes the alarm in a format that Google Calendar can understand.
     """
-
-    # input = CalendarAlarmResponse(**input)
 
     month = input.event_time.strftime("%B")
     day_number = input.event_time.strftime("%d")
@@ -123,11 +76,13 @@ class CalendarAlarmServicePipeline:
         self._generator = OpenAIGenerator(
             model="gpt-4o",
             generation_kwargs={"temperature": 0},
-            # generation_kwargs={
-            #     "response_format": {"type": "json_object"}
-            # }
         )
         self._pipeline = Pipeline(max_loops_allowed=20)
+
+    def cleanJsonOutput(self, jsonOutput: str) -> str:
+        jsonOutput = jsonOutput.replace("```json", "")
+        jsonOutput = jsonOutput.replace("```", "")
+        return jsonOutput
 
     @component.output_types(output=GoogleCalendarInfoInput)
     def run(self, input: str) -> GoogleCalendarInfoInput:
@@ -168,84 +123,4 @@ class CalendarAlarmServicePipeline:
             response=create_alarm_readout(parsedJsonObject), theJson=parsedJsonObject
         )
 
-    def cleanJsonOutput(self, jsonOutput: str) -> str:
-        jsonOutput = jsonOutput.replace("```json", "")
-        jsonOutput = jsonOutput.replace("```", "")
-        return jsonOutput
 
-
-class CalendarAlarmService:
-    """A service class for creating calendar alarms."""
-
-    def __init__(self):
-        super(CalendarAlarmService, self).__init__()
-        print("\n=====Calendar Alarm Service Initialized")
-
-    async def create_alarm_json(self, user_input: str) -> GoogleCalendarInfoInput:
-        """Creates a calendar alarm in JSON format.
-
-        Args:
-            user_input (str): The user input for creating the alarm.
-
-        Returns:
-            GoogleCalendarInfoInput: The response containing the alarm information in JSON format.
-        """
-
-        input = {"user_input": user_input, "current_time": datetime.now().isoformat()}
-
-        create_calendar_readout_structured_tool = StructuredTool.from_function(
-            func=create_alarm_readout,
-            name="CreateCalendarReadoutTool",
-            description="This tool should be called with the JSON object that contains the alarm information. It will return a string that describes the alarm in a format that Google Calendar can understand.",
-        )
-
-        tools = [create_calendar_readout_structured_tool]
-
-        agent = create_openai_tools_agent(
-            llm, tools, calendar_alarm_service_final_prompt
-        )
-
-        agent_executer = AgentExecutor(agent=agent, tools=tools, verbose=True, return_intermediate_steps=True, max_execution_time=30.0, max_iterations=15)  # type: ignore
-
-        async def getResponseAndValidate(input):
-            global evaluationCount
-            evaluationCount = 0
-            response = await agent_executer.ainvoke(input)
-
-            parsedOutput = json.loads(response["output"])
-            examenResponse: Dict[str, bool] = evaluator.evaluate_strings(
-                prediction=parsedOutput,
-                reference=agent_executer.get_output_schema().schema_json(),
-            )
-
-            if examenResponse["score"] is False and evaluationCount <= 3:
-                evaluationCount += 1
-                pprint.pprint(examenResponse)
-                return getResponseAndValidate(input)
-
-            elif evaluationCount > 3:
-                return GoogleCalendarInfoInput(
-                    response="",
-                    theJson=CalendarAlarmResponse(
-                        error=True,
-                        # create empty responses for the remaining fields
-                        name="",
-                        category=Category.ALWAYS,
-                        lead_time=0,
-                        event_time=datetime.now(),
-                        event_time_end=datetime.now(),
-                        location="",
-                        current_time=datetime.now(),
-                        # response=response['output']
-                    ),
-                )
-            else:
-
-                output = json.loads(response["output"])
-                responseValue = GoogleCalendarInfoInput(
-                    response=output["response"], theJson=output["json"]
-                )
-                return responseValue
-
-        final = await getResponseAndValidate(input)
-        return final
