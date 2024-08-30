@@ -1,8 +1,12 @@
-from fastapi.responses import JSONResponse
-from pydantic import Field, BaseModel
-from enum import Enum
 from datetime import datetime
-from typing import Any, Dict, Union, Optional
+from enum import Enum
+from typing import Any, Dict, Optional, Union
+
+from pydantic import BaseModel, Field
+
+
+class CreateAlarmRequest(BaseModel):
+    input: str
 
 
 class Category(str, Enum):

@@ -1,4 +1,3 @@
-from datetime import datetime, timedelta
 import os.path
 
 from google.auth.exceptions import RefreshError
@@ -9,7 +8,6 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from calarmhelp.services.util.util import GoogleCalendarInfoInput
-
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = [

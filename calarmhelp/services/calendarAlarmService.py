@@ -1,19 +1,12 @@
-from haystack import Pipeline
-
+import os
 from datetime import datetime
 
-from calarmhelp.services.util.util import (
-    CalendarAlarmResponse,
-    GoogleCalendarInfoInput,
-)
-
-from haystack.core.component import component
-from haystack.components.generators import OpenAIGenerator
+from haystack import Pipeline
 from haystack.components.builders import PromptBuilder
+from haystack.components.generators import OpenAIGenerator
+from haystack.core.component import component
 
-from ..templates.googleCalendarFeeder import (
-    google_calendar_feeder2,
-)
+from calarmhelp.services.util.util import CalendarAlarmResponse, GoogleCalendarInfoInput
 
 
 def create_alarm_readout(input: CalendarAlarmResponse) -> str:
@@ -91,9 +84,15 @@ class CalendarAlarmServicePipeline:
             "current_time": datetime.now().isoformat(),
         }
 
-        prompt_builder = PromptBuilder(
-            template=google_calendar_feeder2,
+        template_file_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "../templates/googleCalendarFeeder.jinja",
         )
+
+        with open(template_file_path, "r") as file:
+            template_content = file.read()
+
+        prompt_builder = PromptBuilder(template=template_content)
         generator = self._generator
         json_validator = JSONValidator()
 
@@ -122,5 +121,3 @@ class CalendarAlarmServicePipeline:
         return GoogleCalendarInfoInput(
             response=create_alarm_readout(parsedJsonObject), theJson=parsedJsonObject
         )
-
-

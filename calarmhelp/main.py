@@ -1,12 +1,13 @@
-import os
 import logging
+import os
+
 from dotenv import load_dotenv
 from fastapi import FastAPI, status
-from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 from calarmhelp.services.calendarAlarmService import CalendarAlarmServicePipeline
 from calarmhelp.services.googleCalendarService import GoogleCalendarServiceScript
-from fastapi.middleware.cors import CORSMiddleware
+from calarmhelp.services.util.util import CreateAlarmRequest
 
 load_dotenv()
 
@@ -26,10 +27,6 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
-
-
-class CreateAlarmRequest(BaseModel):
-    input: str
 
 
 @app.post("/create_alarm", status_code=status.HTTP_201_CREATED)
