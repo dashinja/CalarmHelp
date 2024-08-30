@@ -1,3 +1,4 @@
+[tool.poetry]
 name = "calarmhelp"
 version = "0.1.0"
 description = ""
