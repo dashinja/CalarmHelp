@@ -15,5 +15,5 @@ repos:
   # - id: bandit
   # - id: mypy
   # - id: shellcheck
-  - id: mdformat-check
-  - id: mdformat
+  # - id: mdformat-check
+  # - id: mdformat
