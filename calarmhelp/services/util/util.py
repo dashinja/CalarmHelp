@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+import json
 from typing import Any, Dict, Optional, Union
 
 from pydantic import BaseModel, Field
@@ -22,7 +23,7 @@ class CalendarAlarmResponse(BaseModel):
 
     name: str = Field(description="Name of the event")
     category: Category = Field(
-        default=Category.ALWAYS, description="Category of the event"
+        default=Category.ALWAYS, description="Category of the event", exclude=True
     )
     lead_time: int = Field(
         description="How long before the event I should be reminded. Defaults to 30 minutes if not provided."
@@ -44,6 +45,22 @@ class CalendarAlarmResponse(BaseModel):
         description="The current time. Always following the 'America/New_York' timezone."
     )
 
+    def to_dict(self) -> Dict[str, Union[str, Any]]:
+        """Serializes object"""
+        return {
+            "name": self.name,
+            "category": self.category.name.lower(),
+            "lead_time": self.lead_time,
+            "event_time": self.event_time.isoformat(),
+            "event_time_end": self.event_time_end.isoformat(),
+            "location": self.location,
+            "error": self.error,
+            "current_time": self.current_time,
+        }
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict(), default=str)
+
 
 class GoogleCalendarInfoInput(BaseModel):
     """Model for Google Calendar information input."""
@@ -55,5 +72,8 @@ class GoogleCalendarInfoInput(BaseModel):
         """Serializes object"""
         return {
             "response": self.response,
-            "jsonResponse": self.jsonResponse.model_dump(),
+            "jsonResponse": self.jsonResponse.to_dict(),
         }
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict(), default=str)

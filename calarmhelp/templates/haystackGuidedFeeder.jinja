@@ -1,0 +1,10 @@
+Create a JSON object from the information present in this passage: {{input}}.
+Only use information that is present in the passage. Follow this JSON schema, but only return the actual instances without any additional schema definition:
+{{schema}}
+Make sure your response is a dict and not a list.
+{% if invalid_replies and error_message %}
+  You already created the following output in a previous attempt: {{invalid_replies}}
+  However, this doesn't comply with the format requirements from above and triggered this Python exception: {{error_message}}
+  Correct the output and try again. Just return the corrected output without any extra explanations.
+  If iteration: {{iteration}} is less than {{iteration_limit}}, you can try again.
+{% endif %}

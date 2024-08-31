@@ -28,6 +28,8 @@
     
     For 'event_time' and 'event_time_end' assume the day is the same as the current day unless otherwise noted.    
     If you cannot find an event_time_end simply add 30 minutes to event_time.
+    Do not create json that has an event_time ealier than the {{input.current_time}} in the past.
+    If event_time is earlier than the current time: {{input.current_time}}, assume the event_time is the next day, unless otherwise noted.
     If you are done say 'DONE' and return your new entities in the next line
     If not, simply return the best properties you come up with.
     If there are no possibilities for an optional entity, return an empty string.
@@ -71,6 +73,8 @@
     
     
     If you cannot find an event_time_end simply add 30 minutes to event_time.
+    Do not create json that has an event_time ealier than the {{input.current_time}} in the past.
+    If event_time is earlier than the current time: {{input.current_time}}, assume the event_time is the next day, unless otherwise noted.
     If there are no possibilities for an optional entity, return an empty string for this entity value.
 
     Do not explain yourself in the output.
