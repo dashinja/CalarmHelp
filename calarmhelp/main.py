@@ -13,10 +13,12 @@ load_dotenv()
 
 
 logging.basicConfig(
-    format="%(levelname)s - %(name)s -  %(message)s", level=logging.WARNING
+    format="%(levelname)s - %(name)s -  %(message)s", level=logging.INFO
 )
-logger = logging.getLogger("haystack")
-logging.getLogger("haystack").setLevel(logging.INFO)
+loggerHaystack = logging.getLogger("haystack")
+loggerGoogleCalendarService = logging.getLogger("Google Calendar Service")
+
+# logging.getLogger("haystack").setLevel(logging.INFO)
 
 app = FastAPI(docs_url="/")
 
@@ -41,15 +43,13 @@ async def create_alarm(request: CreateAlarmRequest):
     Returns:
         StreamingResponse: A streaming response with the alarm information in JSON format.
     """
-    print("=====Calling Calendar Alarm Service\n")
-    logger.info("Calling Calendar Alarm Service")
+    loggerHaystack.info("Calling Calendar Alarm Service")
+
     CalendarService = CalendarAlarmServicePipeline(max_loops_allowed=40)
     calendar_service_response = CalendarService.run(input=request.input)
 
-    print("=====Passing to Google Calendar Service\n")
-    logger.info("Passing to Google Calendar Service")
-    GoogleCalendarServiceScript(calendar_service_response)
+    loggerHaystack.info("Passing to Google Calendar Service")
+    GoogleCalendarServiceScript(calendar_service_response, loggerGoogleCalendarService)
 
-    print("=====Returning from Google Calendar Service\n")
-    logger.info("Returning from Google Calendar Service")
+    loggerHaystack.info("Returning from Google Calendar Service")
     return calendar_service_response.to_dict()
