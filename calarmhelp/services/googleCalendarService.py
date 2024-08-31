@@ -77,7 +77,7 @@ def GoogleCalendarServiceScript(
         created_event = (
             service.events().insert(calendarId="primary", body=myEvent).execute()
         )
-        
+
         if not created_event:
             logger.exception("Event Creation Failed")
             return {"error": "Event Creation Failed"}

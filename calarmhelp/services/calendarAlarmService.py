@@ -1,3 +1,4 @@
+from haystack_integrations.components.connectors.langfuse import LangfuseConnector
 import os
 import json
 import logging
@@ -22,7 +23,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from haystack_integrations.components.connectors.langfuse import LangfuseConnector
 
 logger = logging.getLogger("haystack")
 
