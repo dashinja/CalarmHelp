@@ -54,14 +54,11 @@ touch .env
 
 ```.env
   OPENAI_API_KEY=<Refer to OpenAI Docs>
-  export LANGCHAIN_TRACING_V2=<Refer to LangSmith Docs>
-  export LANGCHAIN_API_KEY=<Refer to LangSmith Docs>
   ORIGINS=<A string which defines origins for CORS middleware>
 ```
 
 [OpenAI API Keys](https://platform.openai.com/docs/quickstart/step-2-set-up-your-api-key)
 <br>
-[LangSmith Documentation](https://docs.smith.langchain.com/#3-set-up-your-environment)
 
 7. Add GCP Credentials
    #TODO#
