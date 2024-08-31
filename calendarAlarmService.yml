@@ -1,0 +1,89 @@
+components:
+  generator:
+    init_parameters:
+      api_base_url: null
+      api_key:
+        env_vars:
+        - OPENAI_API_KEY
+        strict: true
+        type: env_var
+      generation_kwargs:
+        temperature: 0
+      model: gpt-4o
+      organization: null
+      streaming_callback: null
+      system_prompt: null
+    type: haystack.components.generators.openai.OpenAIGenerator
+  prompt_builder:
+    init_parameters:
+      required_variables: null
+      template: "{% if properties_to_validate %}\n    Here was the context you were\
+        \ provided:\n    {{input.user_input}}\n\n    Here are the entities you previously\
+        \ extracted:\n    {{properties_to_validate}}\n    Are these the correct entities?\n\
+        \    Things to check for:\n    - Entities should be exactly one of these:\
+        \ name, category, lead_time, event_time, event_time_end, location, error,\
+        \ current_time\n    - Required entities are: name, category, lead_time, event_time,\
+        \ event_time_end, current_time\n    - if entity 'category' is not provided,\
+        \ it should default to 'always'\n    - Entity values should be in the correct\
+        \ format\n    - There should be no extra entities\n    - There should be no\
+        \ missing entities\n    - There should be no duplicate entities\n    \n  \
+        \      Example Output:\n    {\n    \"name\": \"Fix your app at home\",\n \
+        \   \"category\": \"home\",\n    \"lead_time\": 10,\n    \"event_time\": \"\
+        2024-08-25T14:00:00-04:00\",\n    \"event_time_end\": \"2024-08-25T16:00:00-04:00\"\
+        ,\n    \"location\": \"home\",\n    \"error\": false,\n    \"current_time\"\
+        : \"2024-08-25T09:10:06.325722\"\n    }\n    \n    For 'event_time' and 'event_time_end'\
+        \ assume the day is the same as the current day unless otherwise noted.  \
+        \  \n    If you cannot find an event_time_end simply add 30 minutes to event_time.\n\
+        \    Do not create json that has an event_time ealier than the {{input.current_time}}\
+        \ in the past.\n    If event_time is earlier than the current time: {{input.current_time}},\
+        \ assume the event_time is the next day, unless otherwise noted.\n    If you\
+        \ are done say 'DONE' and return your new entities in the next line\n    If\
+        \ not, simply return the best properties you come up with.\n    If there are\
+        \ no possibilities for an optional entity, return an empty string.\n    \n\
+        \    Do not explain yourself in the output.\n    markdown json output:\n{%\
+        \ else%}\n    Extract entities from the following context.\n\n    Context:\
+        \ {{input}}\n    Current Time: {{input.current_time}}\n    Be sure to make\
+        \ your decisions considering that the current time and day is noted in the\
+        \ {{input.current_time}} value.\n    The entities should be presented as key-value\
+        \ pairs in a JSON string.\n\n    Example Input:\n    {\n    \"input\": \"\
+        Fix your app at 2PM Today at home. Remind me 10 minutes beforehand.\"\n  \
+        \  }\n    \n    Example Output:\n    {\n    \"name\": \"Fix your app at home\"\
+        ,\n    \"category\": \"home\",\n    \"lead_time\": 10,\n    \"event_time\"\
+        : \"2024-08-25T14:00:00-04:00\",\n    \"event_time_end\": \"2024-08-25T16:00:00-04:00\"\
+        ,\n    \"location\": \"home\",\n    \"error\": false,\n    \"current_time\"\
+        : \"2024-08-25T09:10:06.325722\"\n    }\n\n    Here is the schema for the\
+        \ JSON:\n        name: str = Field(description=\"Name of the event\")\n  \
+        \      category: Category = Field(default=Category.ALWAYS, description=\"\
+        Category of the event\")\n        lead_time: int = Field(description=\"How\
+        \ long before the event I should be reminded. Defaults to 30 minutes if not\
+        \ provided.\")\n        event_time: datetime = Field(description=\"When the\
+        \ event should actually happen. Always following the 'America/New_York' timezone.\
+        \ Assume the day is the same as the current day unless otherwise noted.\"\
+        )\n        event_time_end: datetime = Field(description=\"When the event should\
+        \ actually end. Always following the 'America/New_York' timezone. Assume the\
+        \ day is the same as the current day unless otherwise noted.\")\n        location:\
+        \ str = Field(description=\"Location of event, if provided\")\n        error:\
+        \ bool = Field(default=False, description=\"If there was an error in the input\
+        \ then True. Otherwise, False.\")\n        current_time: datetime = Field(description=\"\
+        The current time. Always following the 'America/New_York' timezone.\")\n \
+        \   \n    \n    If you cannot find an event_time_end simply add 30 minutes\
+        \ to event_time.\n    Do not create json that has an event_time ealier than\
+        \ the {{input.current_time}} in the past.\n    If event_time is earlier than\
+        \ the current time: {{input.current_time}}, assume the event_time is the next\
+        \ day, unless otherwise noted.\n    If there are no possibilities for an optional\
+        \ entity, return an empty string for this entity value.\n\n    Do not explain\
+        \ yourself in the output.\n    markdown json output:\n{% endif %}"
+      variables: null
+    type: haystack.components.builders.prompt_builder.PromptBuilder
+  validator:
+    init_parameters: {}
+    type: calarmhelp.services.calendarAlarmService.JSONValidator
+connections:
+- receiver: generator.prompt
+  sender: prompt_builder.prompt
+- receiver: validator.properties
+  sender: generator.replies
+- receiver: prompt_builder.properties_to_validate
+  sender: validator.properties_to_validate
+max_loops_allowed: 40
+metadata: {}
