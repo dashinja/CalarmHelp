@@ -44,7 +44,7 @@ ARG UID=10001
 RUN adduser \
     --disabled-password \
     --gecos "" \
-    --home "/nonexistent" \
+    --home "/home/appuser" \
     --shell "/sbin/nologin" \
     --no-create-home \
     --uid "${UID}" \
@@ -57,7 +57,7 @@ RUN --mount=type=cache,target=/root/.cache/poetry_dependencies \
     && poetry install --no-interaction
 # Downloads dependencies using Poetry and installs them in the virtual environment.
 
-RUN mkdir /appuser && chown -R appuser:appuser /app
+RUN mkdir -p /home/appuser && chown -R appuser:appuser /home/appuser /app
 # Creates a directory for the non-privileged user and sets ownership.
 
 USER appuser
@@ -71,9 +71,10 @@ COPY . .
 
 EXPOSE 8000
 # Exposes the port that the application listens on.
+ENV ENVIRONMENT=production
 
 WORKDIR /app/
 # Sets the working directory to /app/.
 
-CMD poetry run uvicorn main:app --reload --host 0.0.0.0 --port 8000
+CMD ["uvicorn", "calarmhelp.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 # Runs the application using uvicorn.

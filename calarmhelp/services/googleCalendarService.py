@@ -1,13 +1,18 @@
 import os.path
+import os
 
-from google.auth.exceptions import RefreshError
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.exceptions import MutualTLSChannelError
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from google.oauth2.credentials import Credentials
 
 from calarmhelp.services.util.util import GoogleCalendarInfoInput
+
+from google.oauth2 import service_account
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = [
@@ -28,27 +33,24 @@ def GoogleCalendarServiceScript(whole_user_input: GoogleCalendarInfoInput):
     """
     user_input = whole_user_input.jsonResponse
 
-    creds = None
-
-    if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
-
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            try:
-                creds.refresh(Request())
-            except RefreshError:
-                creds = None
-        if not creds:
-            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
-            creds = flow.run_local_server(port=0)
-            # Save the credentials for the next run
-            with open("token.json", "w") as token:
-                token.write(creds.to_json())
-
     try:
         # see https://developers.google.com/calendar/api/v3/reference/events/insert
-        service = build("calendar", "v3", credentials=creds)
+
+        if os.getenv("ENVIRONMENT") not in ["production", "docker"]:
+            cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
+            streetCred = service_account.Credentials.from_service_account_file(
+                cred_path, scopes=SCOPES
+            )
+
+            service = build("calendar", "v3", credentials=streetCred)
+        # service = build("calendar", "v3", credentials=defaultCreds)
+
+        else:
+            defaultCreds, project = default()
+            service = build("calendar", "v3", credentials=) 
+        if not service:
+            raise Exception("google service not created")
 
         myEvent = {
             "summary": whole_user_input.response,
@@ -71,5 +73,8 @@ def GoogleCalendarServiceScript(whole_user_input: GoogleCalendarInfoInput):
             return
         else:
             return created_event["summary"]
-    except HttpError as error:
-        print(f"====An error occurred: {error}")
+    except (HttpError, MutualTLSChannelError) as error:
+        if MutualTLSChannelError:
+            raise Exception(error)
+        if HttpError:
+            raise Exception(error)

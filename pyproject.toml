@@ -10,26 +10,21 @@ python = "^3.10"
 python-dotenv = "^1.0.1"
 uvicorn = {extras = ["standard"], version = "^0.29.0"}
 fastapi = "^0.110.1"
-jsonschema = "^4.21.1"
 google-auth = "^2.29.0"
 google-api-python-client = "^2.126.0"
 google-auth-httplib2 = "^0.2.0"
 google-auth-oauthlib = "^1.2.0"
 functions-framework = "^3.5.0"
-httpx = "^0.27.0"
-asyncio = "^3.4.3"
-google-cloud-storage = "^2.17.0"
 pynvim = "^0.5.0"
 haystack-ai = "^2.4.0"
 jinja2 = "^3.1.4"
 colorama = "^0.4.6"
 black = "^24.8.0"
 invoke = "^2.2.0"
-hayhooks = "^0.0.17"
-transformers = {extras = ["sentencepiece", "torch"], version = "^4.44.2"}
 
 [tool.poetry.scripts]
 start = "calarmhelp.scripts.start:run"
+precommit = "calarmhelp.scripts.precommit:run"
 
 [tool.poetry.group.dev.dependencies]
 pyproject-pre-commit = "^0.2.1"

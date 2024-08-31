@@ -193,15 +193,16 @@ class CalendarAlarmServicePipeline:
             "validator.properties_to_validate", "prompt_builder.properties_to_validate"
         )
 
-        self._pipeline.draw(
-            Path(
-                os.path.join(os.path.dirname(os.path.abspath(__file__))),
-                "../architecture/pipelines/calendarAlarmServicePineline.png",
+        if os.getenv("ENVIRONMENT") not in ["production", "docker"]:
+            self._pipeline.draw(
+                Path(
+                    os.path.join(os.path.dirname(os.path.abspath(__file__))),
+                    "../architecture/pipelines/calendarAlarmServicePineline.png",
+                )
             )
-        )
 
-        with open("calendarAlarmService.yml", "w") as file:
-            self._pipeline.dump(file)
+            with open("calendarAlarmService.yml", "w") as file:
+                self._pipeline.dump(file)
 
         results = self._pipeline.run(
             data={
