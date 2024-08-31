@@ -75,6 +75,11 @@ components:
         \ yourself in the output.\n    markdown json output:\n{% endif %}"
       variables: null
     type: haystack.components.builders.prompt_builder.PromptBuilder
+  tracer:
+    init_parameters:
+      name: Calendar Alarm Service
+      public: false
+    type: haystack_integrations.components.connectors.langfuse.langfuse_connector.LangfuseConnector
   validator:
     init_parameters: {}
     type: calarmhelp.services.calendarAlarmService.JSONValidator

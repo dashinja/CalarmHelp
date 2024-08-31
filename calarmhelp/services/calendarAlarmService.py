@@ -15,13 +15,17 @@ from haystack.components.builders import PromptBuilder
 from haystack.components.generators import OpenAIGenerator
 from haystack.core.component import component
 
+
 from calarmhelp.services.util.util import CalendarAlarmResponse, GoogleCalendarInfoInput
 
 from dotenv import load_dotenv
 
+load_dotenv()
+
+from haystack_integrations.components.connectors.langfuse import LangfuseConnector
+
 logger = logging.getLogger("haystack")
 
-load_dotenv()
 
 template_file_path = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -36,7 +40,7 @@ def create_alarm_readout(input: CalendarAlarmResponse) -> str:
     """Provides the 'description' field for google calendar
 
     Args:
-        input (dict): The input dictionary containing alarm information.
+        input (CalendarAlarmResponse): The input object containing alarm information.
 
     Returns:
         str: A string that describes the alarm in a format that Google Calendar can understand.
@@ -183,6 +187,9 @@ class CalendarAlarmServicePipeline:
         generator = self._generator
         json_validator = JSONValidator()
 
+        self._pipeline.add_component(
+            "tracer", LangfuseConnector("Calendar Alarm Service")
+        )
         self._pipeline.add_component("prompt_builder", prompt_builder)
         self._pipeline.add_component("generator", generator)
         self._pipeline.add_component("validator", json_validator)
@@ -214,6 +221,8 @@ class CalendarAlarmServicePipeline:
 
         jsonOutput = self.cleanJsonOutput(jsonOutput)
         parsedJsonObject = CalendarAlarmResponse.model_validate_json(jsonOutput)
+
+        logger.info(f"\nLangFuse: {results['tracer']['trace_url']}\n")
 
         return GoogleCalendarInfoInput(
             response=create_alarm_readout(parsedJsonObject), theJson=parsedJsonObject

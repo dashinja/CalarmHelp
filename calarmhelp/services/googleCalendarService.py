@@ -1,27 +1,36 @@
 import os.path
 import os
+from typing import Any
+import logging
 
+from google.auth import default
 from google.auth.exceptions import MutualTLSChannelError
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from google.oauth2.credentials import Credentials
 
 from calarmhelp.services.util.util import GoogleCalendarInfoInput
 
+# Add the import statement for GoogleCalendarInfoInput
+
 from google.oauth2 import service_account
+
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# If modifying these scopes, delete the file token.json.
+logger = logging.getLogger("Google Calendar Service")
+
+
 SCOPES = [
     "https://www.googleapis.com/auth/calendar.readonly",
     "https://www.googleapis.com/auth/calendar",
 ]
 
 
-def GoogleCalendarServiceScript(whole_user_input: GoogleCalendarInfoInput):
+def GoogleCalendarServiceScript(
+    whole_user_input: GoogleCalendarInfoInput,
+) -> dict[str, Any]:
     """
     This function interacts with the Google Calendar API to create a new event on the user's calendar.
 
@@ -44,13 +53,13 @@ def GoogleCalendarServiceScript(whole_user_input: GoogleCalendarInfoInput):
             )
 
             service = build("calendar", "v3", credentials=streetCred)
-        # service = build("calendar", "v3", credentials=defaultCreds)
-
         else:
-            defaultCreds, project = default()
-            service = build("calendar", "v3", credentials=) 
+            defaultCreds, _ = default()
+
+            service = build("calendar", "v3", credentials=defaultCreds)
+
         if not service:
-            raise Exception("google service not created")
+            return {"error": "google calendar service not created, find a better way"}
 
         myEvent = {
             "summary": whole_user_input.response,
@@ -68,13 +77,14 @@ def GoogleCalendarServiceScript(whole_user_input: GoogleCalendarInfoInput):
         created_event = (
             service.events().insert(calendarId="primary", body=myEvent).execute()
         )
+        
         if not created_event:
-            print("====Event Creation Failed")
-            return
+            logger.exception("Event Creation Failed")
+            return {"error": "Event Creation Failed"}
         else:
-            return created_event["summary"]
+            logger.info("Event Created")
+            logger.info("Event Object: ", created_event)
+            return {"success": "Event Created"}
     except (HttpError, MutualTLSChannelError) as error:
-        if MutualTLSChannelError:
-            raise Exception(error)
-        if HttpError:
-            raise Exception(error)
+        logger.exception(error)
+        return {"error": str(error)}

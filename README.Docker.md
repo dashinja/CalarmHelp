@@ -1,29 +1,57 @@
-### Building and running your application
 
-When you're ready, start your application by running:
+
+### Locally with Docker
+The advantage of running your application in Docker is that you can ensure that your application runs the same way locally as it does in the cloud.
+
+When you're ready to run locally, start your application by running:
 `docker compose up --build`.
 
 Your application will be available at http://localhost:8000.
 
-### Deploying your application to the cloud
+(To run locally on your macine without docker [click here](README.md#locally-on-your-machine))
+_________________
 
-#### Login to your registry
+### Deploying to Google Cloud
+After ensuring that docker and docker-compose are installed - and that docker-desktop is running - you can build and run your application by running:
+1. Setup gcloud auth: 
+  ```
+  gcloud auth login
+  ```
+2. Set your project: 
+```
+gcloud config set project calarmhelp
+```
+3. Set your region: 
+```
+gcloud config set compute/region us-east1
+```
+4. Set your registry: 
+```
+gcloud auth configure-docker gcr.io
+```
+5. Build your image: 
+Be careful to include the `.` at the end of the command.
+It is not a typo, it is a reference to the current directory.
+```
+docker build -t gcr.io/calarmhelp/<name-you-pick>:latest .
+```
+6. Push your image: 
+Notice, there is no further reference to the current directory, hence no `.` is needed.
+```
+docker push gcr.io/calarmhelp/<name-you-picked-in-the-previous-step>:latest
+```
+7. Deploy your image: 
+```
+gcloud run deploy --image gcr.io/calarmhelp/<name-you-picked-in-the-previous-step>:latest --platform managed --region us-east1 --allow-unauthenticated
+```
 
-`docker login myregistry.com`.
-
-
-First, build your image, e.g.: `docker build -t us-east1-docker.pkg.dev/723574083303/myapp:latest .`.
-
-If your cloud uses a different CPU architecture than your development
-machine (e.g., you are on a Mac M1 and your cloud provider is amd64),
-you'll want to build the image for that platform, e.g.:
-`docker build --platform=linux/amd64 -t myapp .`.
-
-Then, push it to your registry, e.g. `docker push myregistry.com/myapp`.
-
-Consult Docker's [getting started](https://docs.docker.com/go/get-started-sharing/)
-docs for more detail on building and pushing.
-
-### References
-
-- [Docker's Python guide](https://docs.docker.com/language/python/)
+_________________
+README.md
+## References
+- [README.md#Start](README.md#Start): Instructions for starting the application.
+- [Docker's Python guide](https://docs.docker.com/language/python/): Official guide for using Python with Docker.
+- [Docker: Getting Started](https://docs.docker.com/get-started/workshop/): Comprehensive guide on building and pushing Docker images.
+- [Docker Compose: How it Works](https://docs.docker.com/compose/compose-application-model/): Explanation of Docker Compose functionality.
+- [Google Cloud Run](https://cloud.google.com/run/docs/deploying): Documentation for deploying applications to Google Cloud Run.
+- [Google Cloud Workload Identity Federation](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers): Guide on integrating other identity providers with Google Cloud.
+- [Google Cloud Local testing](https://cloud.google.com/kubernetes-engine/enterprise/knative-serving/docs/testing/local): Instructions for local testing with Google Cloud.
