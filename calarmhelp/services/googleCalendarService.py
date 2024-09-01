@@ -1,13 +1,14 @@
 import os.path
 import os
 from typing import Any
-import logging
 from logging import Logger
 
 from google.auth import default
 from google.auth.exceptions import MutualTLSChannelError
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from google.auth.transport.requests import Request
+
 
 from calarmhelp.services.util.util import GoogleCalendarInfoInput
 
@@ -27,8 +28,7 @@ SCOPES = [
 
 
 def GoogleCalendarServiceScript(
-    whole_user_input: GoogleCalendarInfoInput,
-    logger: Logger
+    whole_user_input: GoogleCalendarInfoInput, logger: Logger
 ) -> dict[str, Any]:
     """
     This function interacts with the Google Calendar API to create a new event on the user's calendar.
@@ -48,14 +48,37 @@ def GoogleCalendarServiceScript(
             logger.info("Using Service Account")
             cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
-            streetCred = service_account.Credentials.from_service_account_file(
-                cred_path, scopes=SCOPES
+            userServiceCredentials = (
+                service_account.Credentials.from_service_account_file(
+                    filename=cred_path, scopes=SCOPES
+                )
             )
 
-            service = build("calendar", "v3", credentials=streetCred)
+            if not userServiceCredentials.valid:
+                logger.info("UserServiceCredentials not valid")
+            if not userServiceCredentials or not userServiceCredentials.valid:
+                # if userServiceCredentials and userServiceCredentials.expired:
+                    logger.info("Credentials Expired")
+                    logger.info("Refreshing Credentials")
+                    request = Request()
+                    
+                    userServiceCredentials.refresh(request)
+                    if userServiceCredentials.valid:
+                        logger.info("Credentials now valid and refreshed")
+
+            service = build(
+                "calendar",
+                "v3",
+                credentials=userServiceCredentials,
+                cache_discovery=False,
+            )
         else:
             logger.info("Using Default Credentials")
             defaultCreds, _ = default()
+
+            if not defaultCreds:
+                logger.exception("defaultCreds not found")
+                return {"error": "defaultCreds not found"}
 
             service = build("calendar", "v3", credentials=defaultCreds)
 
@@ -75,6 +98,9 @@ def GoogleCalendarServiceScript(
                 "timeZone": "America/New_York",
             },
         }
+
+        calendarIds = service.calendarList().list().execute()
+        logger.info(f"Calendar List: {calendarIds}")
 
         logger.debug(f"Event Object: {myEvent}")
         logger.info("Creating Event")
