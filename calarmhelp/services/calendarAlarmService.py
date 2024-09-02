@@ -1,32 +1,20 @@
-from haystack_integrations.components.connectors.langfuse import LangfuseConnector
 import os
-import json
-import logging
-
-import pydantic
-from pydantic import ValidationError
-
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Type
+from dotenv import load_dotenv
 
 from haystack import Pipeline
 from haystack.utils import Secret
 from haystack.components.builders import PromptBuilder
 from haystack.components.generators import OpenAIGenerator
 from haystack.core.component import component
-
+from haystack_integrations.components.connectors.langfuse import LangfuseConnector
 
 from calarmhelp.services.util.util import CalendarAlarmResponse, GoogleCalendarInfoInput
 
-from dotenv import load_dotenv
-
 load_dotenv()
 
-
-logger = logging.getLogger("haystack")
-
-
+# Load the template file
 template_file_path = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "../templates/googleCalendarFeeder.jinja",
@@ -34,6 +22,35 @@ template_file_path = os.path.join(
 
 with open(template_file_path, "r") as file:
     template_content = file.read()
+
+
+def create_pipeline_chart(pipeline: Pipeline, file_name: str = "pipeline.png"):
+    """
+    Create a pipeline chart.
+
+    Args:
+        pipeline (Pipeline): The pipeline object to be drawn.
+        file_name (str, optional): The name of the output file. Defaults to "pipeline.png".
+    """
+    if os.getenv("ENVIRONMENT") not in ["production", "docker"]:
+        pipeline.draw(
+            Path(
+                os.path.join(os.path.dirname(os.path.abspath(__file__))),
+                f"../architecture/pipelines/{file_name}",
+            )
+        )
+
+
+def create_pipeline_yml(pipeline: Pipeline, file_name: str = "pipeline.yml"):
+    """
+    Creates a YAML file for the given pipeline.
+
+    Args:
+        pipeline (Pipeline): The pipeline object to be dumped into the YAML file.
+        file_name (str, optional): The name of the YAML file. Defaults to "pipeline.yml".
+    """
+    with open(file_name, "w") as file:
+        pipeline.dump(file)
 
 
 def create_alarm_readout(input: CalendarAlarmResponse) -> str:
@@ -58,44 +75,36 @@ def create_alarm_readout(input: CalendarAlarmResponse) -> str:
 
 @component
 class JSONValidator:
+    """
+    This class provides a JSON validation functionality.
+
+    Methods:
+    - run(properties: list[str]) -> dict: Validates the given properties and returns a dictionary with the validation results.
+
+    Attributes:
+    - None
+        Validates the given properties and returns a dictionary with the validation results.
+
+        Parameters:
+        - properties (list[str]): A list of properties to be validated.
+
+        Returns:
+        - dict: A dictionary containing the validation results. If the first property contains the string "DONE", the dictionary will have the key "json" with the modified property value. Otherwise, the dictionary will have the key "properties_to_validate" with the original property value.
+
+        Example:
+        ```
+        validator = JSONValidator()
+        result = validator.run(["DONE: property1"])
+        print(result)  # Output: {"json": ": property1"}
+        ```
+    """
+
     @component.output_types(properties_to_validate=list[str], json=str)
     def run(self, properties: list[str]):
         if "DONE" in properties[0]:
             return {"json": properties[0].replace("Done", "")}
         else:
             return {"properties_to_validate": properties[0]}
-
-
-@component
-class AlternateValidator:
-    def __init__(
-        self, pydantic_model: Type[pydantic.BaseModel], iteration_limit: int = 20
-    ):
-        self.pydantic_model = pydantic_model
-        self.iteration_limit = iteration_limit
-        self.iteration_counter = 0
-
-    @component.output_types(
-        valid_replies=list[str],
-        invalid_replies=Optional[list[str]],
-        error_message=Optional[str],
-    )
-    def run(self, replies: list[str]) -> dict:
-        self.iteration_counter += 1
-
-        try:
-            output_dict = json.loads(replies[0])
-            self.pydantic_model.model_validate(output_dict)
-
-            return {"valid_replies": replies}
-        except (ValueError, ValidationError) as e:
-
-            return {
-                "invalid_replies": replies,
-                "error_message": str(e),
-                "iteration_limit": self.iteration_limit,
-                "iteration": self.iteration_counter,
-            }
 
 
 @component
@@ -138,6 +147,16 @@ class CalendarAlarmServicePipeline:
         self._pipeline = Pipeline(max_loops_allowed=self._max_loops_allowed)
 
     def cleanJsonOutput(self, jsonOutput: str) -> str:
+        """
+        Cleans the given JSON output by removing the markdown code block syntax.
+
+        Args:
+            jsonOutput (str): The JSON output to be cleaned.
+
+        Returns:
+            str: The cleaned JSON output.
+
+        """
         jsonOutput = jsonOutput.replace("```json", "")
         jsonOutput = jsonOutput.replace("```", "")
         return jsonOutput
@@ -148,40 +167,6 @@ class CalendarAlarmServicePipeline:
             "user_input": input,
             "current_time": datetime.now().isoformat(),
         }
-
-        def alternate_validation_setup():
-            # Requires usage of haystackGuidedFeeder.jinja
-
-            alternate_validator = AlternateValidator(
-                pydantic_model=CalendarAlarmResponse,
-                iteration_limit=self._max_loops_allowed,
-            )
-
-            pipeline = Pipeline(max_loops_allowed=self._max_loops_allowed)
-            pipeline.add_component("prompt_builder", prompt_builder)
-            pipeline.add_component("generator", generator)
-            pipeline.add_component("alternate_validator", alternate_validator)
-
-            pipeline.connect("prompt_builder.prompt", "generator.prompt")
-            pipeline.connect("generator.replies", "alternate_validator.replies")
-            pipeline.connect(
-                "alternate_validator.invalid_replies", "prompt_builder.invalid_replies"
-            )
-            pipeline.connect(
-                "alternate_validator.error_message", "prompt_builder.error_message"
-            )
-
-            results = self._pipeline.run(
-                data={
-                    "prompt_builder": {
-                        "input": modified_input,
-                        "schema": CalendarAlarmResponse,
-                        "iteration": self._max_loops_allowed,
-                    },
-                }
-            )
-
-            return results
 
         prompt_builder = PromptBuilder(template=template_content)
         generator = self._generator
@@ -200,17 +185,6 @@ class CalendarAlarmServicePipeline:
             "validator.properties_to_validate", "prompt_builder.properties_to_validate"
         )
 
-        if os.getenv("ENVIRONMENT") not in ["production", "docker"]:
-            self._pipeline.draw(
-                Path(
-                    os.path.join(os.path.dirname(os.path.abspath(__file__))),
-                    "../architecture/pipelines/calendarAlarmServicePineline.png",
-                )
-            )
-
-            with open("calendarAlarmService.yml", "w") as file:
-                self._pipeline.dump(file)
-
         results = self._pipeline.run(
             data={
                 "prompt_builder": {"input": modified_input},
@@ -222,7 +196,7 @@ class CalendarAlarmServicePipeline:
         jsonOutput = self.cleanJsonOutput(jsonOutput)
         parsedJsonObject = CalendarAlarmResponse.model_validate_json(jsonOutput)
 
-        logger.info(f"\nLangFuse: {results['tracer']['trace_url']}\n")
+        print(f"LangFuse: {results['tracer']['trace_url']}\n")
 
         return GoogleCalendarInfoInput(
             response=create_alarm_readout(parsedJsonObject), theJson=parsedJsonObject

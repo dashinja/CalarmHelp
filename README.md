@@ -65,11 +65,24 @@ touch .env
 ```.env
   OPENAI_API_KEY=<Refer to OpenAI Docs>
   ORIGINS=<A string which defines origins for CORS middleware>
+  CALENDAR_ID=<The calendar ID you want to use>
   GOOGLE_APPLICATION_CREDENTIALS=<to the location of your google credentials file>
 ```
-  See [How Application Default Credentials Work](https://cloud.google.com/docs/authentication/application-default-credentials)
+
+See [How Application Default Credentials Work](https://cloud.google.com/docs/authentication/application-default-credentials)
 
 See [OpenAI API Keys](https://platform.openai.com/docs/quickstart/step-2-set-up-your-api-key)
+
+### IMPORTANT: Accessing the Calendar with a Service Account
+Find your `CALENDAR_ID` by going to your Google Calendar, clicking on the three dots next to the calendar you want to use, and selecting `Settings and Sharing`. The `CALENDAR_ID` will be listed under `Integrate Calendar`.
+
+Ensure the calendar is shared with the service account by following these steps:
+
+In the same Settings and sharing section, under "Share with specific people or groups," add the service account's email.
+Assign the "Make changes and manage sharing" permissions.
+
+Otherwise, the service account will not be able to access the calendar. And this application will not be able to create events on your behalf.
+
 <br>
 _________________
 
