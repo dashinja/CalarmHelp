@@ -11,7 +11,7 @@
 ARG PYTHON_VERSION=3.10.12
 # Specifies the Python version to use as a build argument.
 
-FROM python:${PYTHON_VERSION}-slim as base
+FROM python:${PYTHON_VERSION}-slim AS base
 # Sets the base image for the Dockerfile as a slim version of Python.
 
 ENV PYTHONDONTWRITEBYTECODE=1

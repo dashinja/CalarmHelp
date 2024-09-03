@@ -43,7 +43,7 @@ async def create_alarm(request: CreateAlarmRequest):
     """
     loggerGoogleCalendarService.info("Calling Calendar Alarm Service")
 
-    CalendarService = CalendarAlarmServicePipeline(max_loops_allowed=40)
+    CalendarService = CalendarAlarmServicePipeline(max_loops_allowed=10)
     calendar_service_response = CalendarService.run(input=request.input)
 
     loggerGoogleCalendarService.info("Passing to Google Calendar Service")
