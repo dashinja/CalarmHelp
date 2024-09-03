@@ -40,6 +40,7 @@ def runner(service_name):
     subprocess.run(command)
     return service_name
 
+
 def docker_build(service_name=None):
     """
     Specific for ease of us in the `deploy_app` script.
@@ -53,6 +54,7 @@ def docker_build(service_name=None):
     """
     return run()
 
+
 def run(service_name=None):
     """
     Run the docker_build script.
@@ -62,6 +64,7 @@ def run(service_name=None):
     """
     args = arg_parser()
     return runner(service_name or args.docker_image_name)
+
 
 if __name__ == "__main__":
     run()
