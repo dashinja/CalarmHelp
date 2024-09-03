@@ -6,59 +6,68 @@ Perhaps you like to use google calendar to time block both events and tasks - ho
 <br><br>
 Perhaps then you'd like to supplement each calendar event with a separate alarm - which also means double work.
 <br><br>
-Then maybe you found an alarm application like (AMDroid on Android devices) which can look at selected calendars for tags of a given name (i.e. `#work` or `#home`) paired with a reminder syntax (i.e. `[10m]` or `[120m]`) and create an alarm to pair with the specifid event.
+Then maybe you found an alarm application like (AMDroid on Android devices) which can look at selected calendars for tags of a given name (i.e. `#work` or `#home`) paired with a reminder syntax (i.e. `[10m]` or `[120m]`) and create an alarm to pair with the specified event.
 
-A calendar title nomenclature of say: `"Take out the trash. #home [10m]"` and the event itself with a start time of 8:00AM will produce an alarm titled "Take out the trash" and be set for 7:50AM.
+A calendar title nomenclature of say: `"Take out the trash #home [10m]"` and the event itself with a start time of 8:00AM will produce an alarm titled "Take out the trash" and be set for 7:50AM.
 
 CalarmHelp is a word jumble coming from `"Calendar"` + `"Alarm"` + `"Help"`. Calendar Alarm Help.
 
-CalarmHelp contains an API used to trigger `GPT4o` to translate normal human speech like `"At 8AM remind me to take out the trash 10 minutes early at home"` into a JSON object which contains a structured title with a value such as
+CalarmHelp contains an API used to trigger `GPT4o` to translate normal human speech (or an API call) with content `"At 8AM remind me to take out the trash 10 minutes early at home"` into a JSON object which contains a structured title with a value such as
 `"Take out the trash @ 8AM #home [10m]"`.
-<br><br>
+<br>
+<br>
+
 This output (simplified in this readme) is passed as input to a google calendar API service, and calls the create calendar event method - and provides the needed meta data for that event's creation.
-<br><br>
-After the calendar event is created - the Android application can look at the calendar and create an alarm on your behalf based on the tags in that title + the syntax for lead time for a reminder of that alarm.
+<br>
+
+After the calendar event is created - the Android application (or application of your choice) can look at the calendar and create an alarm on your behalf based on the tags in that title + the syntax for lead time for a reminder of that alarm.
 
 ## Setting up your project
 
-#### Requirements
-- [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
+### Requirements
 - [Python >= 3.10](https://www.python.org/downloads/)
 - [Poetry](https://python-poetry.org/docs/)
-- [gcloud](https://cloud.google.com/sdk/docs/install)
+<br>
+
+### Optional Requirements
+- The following is required for working with docker and deploying to Google Cloud:
+  - [Docker](https://docs.docker.com/get-docker/)
+  - [Docker Compose](https://docs.docker.com/compose/install/)
+  - [gcloud CLI](https://cloud.google.com/sdk/docs/install)
 
 _________________
-## Installation
+### Installation
 
-1. Make sure you have Python and Poetry installed on your system. If not, you can install them by following the official documentation:
-
-- Python: https://www.python.org/downloads/
-- Poetry: https://python-poetry.org/docs/#installation
+1. Make sure you have Python and Poetry installed on your system. If not, follow the instructions in the links above.
+<br>
 
 2. Clone this repository to your local machine:
 
 ```shell
 git clone https://github.com/your-username/calarmHelp.git
 ```
+<br>
 
 3. Navigate to the project directory:
 
 ```shell
 cd calarmHelp
 ```
+<br>
 
 4. Install the project dependencies using Poetry:
 
 ```shell
 poetry install
 ```
+<br>
 
 5. Create an environment file
 
 ```shell
 touch .env
 ```
+<br>
 
 6. Add the following environment variables, with values, to the `.env` file.
 
@@ -84,6 +93,7 @@ Assign the "Make changes and manage sharing" permissions.
 Otherwise, the service account will not be able to access the calendar. And this application will not be able to create events on your behalf.
 
 <br>
+
 _________________
 
 ## Building and running your application
@@ -126,16 +136,48 @@ The scripts themselves are defined in the `calarmhelp/scripts` directory.
 
 #### Start:
 To start your application, run:
-```
-poetry run start
-```
-For Running locally with Docker [click here](README.Docker.md#locally-with-docker).
+
+`poetry run start`
+
+For Running locally with Docker [click here](README.Docker.md#locally-with-docker) or see the [Docker-Start](#Docker-Start) section below.
+<br>
+<br>
+
+#### Docker-Start:
+To start your application with Docker, run:
+
+`poetry run docker-start`
+<br>
+<br>
+
+#### Docker-Build:
+To build your application with Docker, run:
+
+`poetry run docker-build <image-tag>`
+<br>
+<br>
+
+#### Docker-Push:
+To push your application with Docker, run:
+
+`poetry run docker-push <image-tag>`
+<br>
+<br>
+
+#### Deploy-App
+To deploy your application to Google Cloud, run:
+
+`poetry run deploy-app <image-tag>`
+##### Important
+This command is comprehensive and will build, push, and deploy your application to Google Cloud Run as well as update the traffic to the new revision.
+<br>
+<br>
 
 #### Linting:
 To lint your code, run:
-```
-poetry run precommit
-```
+
+`poetry run precommit`
+
 The linting step will also happen automatically before you commit your code.
 
 _________________
