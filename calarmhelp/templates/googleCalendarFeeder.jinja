@@ -8,6 +8,7 @@
     Things to check for:
     - Entities should be exactly one of these: name, category, lead_time, event_time, event_time_end, location, error, current_time
     - Required entities are: name, category, lead_time, event_time, event_time_end, current_time
+    - Unless stated, assume the event is on the same day as the current time.
     - if entity 'category' is not provided, it should default to 'always'
     - Entity values should be in the correct format
     - There should be no extra entities
@@ -29,7 +30,6 @@
     For 'event_time' and 'event_time_end' assume the day is the same as the current day unless otherwise noted.    
     If you cannot find an event_time_end simply add 30 minutes to event_time.
     Do not create json that has an event_time earlier than the {{input.current_time}} in the past.
-    If event_time is earlier than the current time: {{input.current_time}}, assume the event_time is the next day, unless otherwise noted.
     If you are done say 'DONE' and return your new entities in the next line
     If not, simply return the best properties you come up with.
     If there are no possibilities for an optional entity, return an empty string.
@@ -74,7 +74,7 @@
     
     If you cannot find an event_time_end simply add 30 minutes to event_time.
     Do not create json that has an event_time earlier than the {{input.current_time}} in the past.
-    If event_time is earlier than the current time: {{input.current_time}}, assume the event_time is the next day, unless otherwise noted.
+    Unless stated, assume the event is on the same day as the current time.
     If there are no possibilities for an optional entity, return an empty string for this entity value.
 
     Do not explain yourself in the output.
