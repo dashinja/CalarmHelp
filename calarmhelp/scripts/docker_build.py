@@ -2,9 +2,19 @@ import argparse
 import subprocess
 
 default_docker_repo = "gcr.io/calarmhelp/calarmhelp:"
+default_docker_repo = "gcr.io/calarmhelp/calarmhelp:"
 
 
 def arg_parser():
+    """
+    Docker build script
+
+    Args:
+        docker_image_name (str): Name of the docker image
+
+    Returns:
+        argparse.Namespace: Parsed command-line arguments
+    """
     """
     Docker build script
 
@@ -30,6 +40,16 @@ def runner(service_name):
         str: The name of the service.
 
     """
+    """
+    Builds a Docker image for the specified service.
+
+    Args:
+        service_name (str): The name of the service.
+
+    Returns:
+        str: The name of the service.
+
+    """
     command = [
         "docker",
         "build",
@@ -39,6 +59,7 @@ def runner(service_name):
     ]
     subprocess.run(command)
     return service_name
+
 
 def docker_build(service_name=None):
     """
@@ -53,6 +74,7 @@ def docker_build(service_name=None):
     """
     return run()
 
+
 def run(service_name=None):
     """
     Run the docker_build script.
@@ -62,6 +84,7 @@ def run(service_name=None):
     """
     args = arg_parser()
     return runner(service_name or args.docker_image_name)
+
 
 if __name__ == "__main__":
     run()
