@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from datetime import datetime
+from typing import Any
 from dotenv import load_dotenv
 
 from haystack import Pipeline
@@ -10,7 +11,11 @@ from haystack.components.generators import OpenAIGenerator
 from haystack.core.component import component
 from haystack_integrations.components.connectors.langfuse import LangfuseConnector
 
-from calarmhelp.services.util.util import CalendarAlarmResponse, GoogleCalendarInfoInput
+from calarmhelp.services.util.util import (
+    CalendarAlarmResponse,
+    GoogleCalendarInfoInput,
+    GoogleCalendarResponse,
+)
 
 load_dotenv()
 
@@ -162,7 +167,7 @@ class CalendarAlarmServicePipeline:
         return jsonOutput
 
     @component.output_types(output=GoogleCalendarInfoInput)
-    def run(self, input: str) -> GoogleCalendarInfoInput:
+    def run(self, input: str) -> GoogleCalendarInfoInput | GoogleCalendarResponse:
         modified_input = {
             "user_input": input,
             "current_time": datetime.now().isoformat(),
@@ -194,10 +199,15 @@ class CalendarAlarmServicePipeline:
         jsonOutput: str = results["validator"]["json"].replace("DONE", "")
 
         jsonOutput = self.cleanJsonOutput(jsonOutput)
-        parsedJsonObject = CalendarAlarmResponse.model_validate_json(jsonOutput)
 
-        print(f"LangFuse: {results['tracer']['trace_url']}\n")
+        try:
+            parsedJsonObject = CalendarAlarmResponse.model_validate_json(jsonOutput)
 
-        return GoogleCalendarInfoInput(
-            response=create_alarm_readout(parsedJsonObject), theJson=parsedJsonObject
-        )
+            print(f"LangFuse: {results['tracer']['trace_url']}\n")
+
+            return GoogleCalendarInfoInput(
+                response=create_alarm_readout(parsedJsonObject),
+                theJson=parsedJsonObject,
+            )
+        except Exception as e:
+            return GoogleCalendarResponse(error=f"Error in Google Calendar Service: {e}")
