@@ -209,4 +209,6 @@ class CalendarAlarmServicePipeline:
                 theJson=parsedJsonObject,
             )
         except Exception as e:
-            return GoogleCalendarResponse(error=f"Error in Google Calendar Service: {e}")
+            return GoogleCalendarResponse(
+                error=f"Error in Google Calendar Service: {e}"
+            )

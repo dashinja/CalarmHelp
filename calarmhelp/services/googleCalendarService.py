@@ -139,5 +139,5 @@ def GoogleCalendarServiceScript(
             return GoogleCalendarResponse(success="Event Created")
     except (HttpError, MutualTLSChannelError) as error:
         logger.exception(error)
-        
+
         return GoogleCalendarResponse(error=str(error))

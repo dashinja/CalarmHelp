@@ -8,7 +8,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from calarmhelp.services.calendarAlarmService import CalendarAlarmServicePipeline
 from calarmhelp.services.googleCalendarService import GoogleCalendarServiceScript
-from calarmhelp.services.util.util import CreateAlarmRequest, GoogleCalendarInfoInput, GoogleCalendarResponse
+from calarmhelp.services.util.util import (
+    CreateAlarmRequest,
+    GoogleCalendarInfoInput,
+    GoogleCalendarResponse,
+)
 
 load_dotenv()
 
@@ -50,13 +54,15 @@ async def create_alarm(request: CreateAlarmRequest) -> dict[str, Any]:
     if isinstance(calendar_service_response, GoogleCalendarResponse):
         loggerGoogleCalendarService.info("Error in Calendar Alarm Service response")
         return calendar_service_response.to_dict()
-    
+
     loggerGoogleCalendarService.info("Passing to Google Calendar Service")
-    google_calender_service_response = GoogleCalendarServiceScript(calendar_service_response, loggerGoogleCalendarService)
+    google_calender_service_response = GoogleCalendarServiceScript(
+        calendar_service_response, loggerGoogleCalendarService
+    )
 
     if google_calender_service_response["error"]:
         loggerGoogleCalendarService.info("Error in Google Calendar Service response")
         return google_calender_service_response.to_dict()
-    
+
     loggerGoogleCalendarService.info("Pipeline Complete")
     return calendar_service_response.to_dict()

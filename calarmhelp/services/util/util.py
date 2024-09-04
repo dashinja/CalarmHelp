@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional, Union
 
 from pydantic import BaseModel, Field
 
+
 class CreateAlarmRequest(BaseModel):
     input: str
 
@@ -78,7 +79,6 @@ class GoogleCalendarInfoInput(BaseModel):
         return json.dumps(self.to_dict(), default=str)
 
 
-
 class GoogleCalendarResponse(BaseModel):
     """Model for Google Calendar response with dynamic keys."""
 
@@ -86,9 +86,9 @@ class GoogleCalendarResponse(BaseModel):
     error: Optional[str] = None
 
     __pydantic_extra__: Dict[str, Any] = {}
-    
+
     class Config:
-        extra = 'allow'
+        extra = "allow"
 
     def __getitem__(self, item):
         return self.__dict__.get(item)
@@ -101,7 +101,9 @@ class GoogleCalendarResponse(BaseModel):
         try:
             return self.__dict__[item]
         except KeyError:
-            raise AttributeError(f"'GoogleCalendarResponse' object has no attribute '{item}'")
+            raise AttributeError(
+                f"'GoogleCalendarResponse' object has no attribute '{item}'"
+            )
 
     def to_dict(self) -> Dict[str, Any]:
         """Serializes object"""
