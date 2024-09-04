@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 from datetime import datetime
-from typing import Any
 from dotenv import load_dotenv
 
 from haystack import Pipeline

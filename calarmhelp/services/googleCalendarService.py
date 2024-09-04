@@ -1,6 +1,4 @@
-import os.path
 import os
-from typing import Any
 from logging import Logger
 import logging
 
@@ -9,16 +7,12 @@ from google.auth.exceptions import MutualTLSChannelError
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.auth.transport.requests import Request
-
+from google.oauth2 import service_account
 
 from calarmhelp.services.util.util import (
     GoogleCalendarInfoInput,
     GoogleCalendarResponse,
 )
-
-
-from google.oauth2 import service_account
-
 
 from dotenv import load_dotenv
 
@@ -42,6 +36,49 @@ def isCalendarFound(calendar_id: str | None, service):
         return {"calendar": None, "found": False}
 
 
+def getService(logger: Logger):
+    if os.getenv("ENVIRONMENT") not in ["production", "docker"]:
+        logger.debug("Using Service Account")
+        cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
+        userServiceCredentials = service_account.Credentials.from_service_account_file(
+            filename=cred_path, scopes=SCOPES
+        )
+
+        if not userServiceCredentials or not userServiceCredentials.valid:
+            logger.debug("UserServiceCredentials Expired: Refreshing Credentials")
+            request = Request()
+
+            userServiceCredentials.refresh(request)
+
+            if userServiceCredentials.valid:
+                logger.debug("Credentials now valid and refreshed")
+
+        # Service created via Google Discovery API for Google Calendar
+        service = build(
+            "calendar",
+            "v3",
+            credentials=userServiceCredentials,
+            cache_discovery=False,
+        )
+
+    else:
+        logger.debug("Using Default Credentials")
+        defaultCreds, _ = default()
+
+        if not defaultCreds:
+            return GoogleCalendarResponse(error="defaultCreds not found")
+
+        service = build("calendar", "v3", credentials=defaultCreds)
+
+    if not service:
+        return GoogleCalendarResponse(
+            error="Google Calendar Service not created, find a better way"
+        )
+
+    return service
+
+
 def GoogleCalendarServiceScript(
     whole_user_input: GoogleCalendarInfoInput, logger: Logger
 ) -> GoogleCalendarResponse:
@@ -60,48 +97,9 @@ def GoogleCalendarServiceScript(
     try:
         # see https://developers.google.com/calendar/api/v3/reference/events/insert
 
-        if os.getenv("ENVIRONMENT") not in ["production", "docker"]:
-            logger.debug("Using Service Account")
-            cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-
-            userServiceCredentials = (
-                service_account.Credentials.from_service_account_file(
-                    filename=cred_path, scopes=SCOPES
-                )
-            )
-
-            if not userServiceCredentials or not userServiceCredentials.valid:
-                logger.debug("UserServiceCredentials Expired: Refreshing Credentials")
-                request = Request()
-
-                userServiceCredentials.refresh(request)
-
-                if userServiceCredentials.valid:
-                    logger.debug("Credentials now valid and refreshed")
-
-            # Service created via Google Discovery API for Google Calendar
-            service = build(
-                "calendar",
-                "v3",
-                credentials=userServiceCredentials,
-                cache_discovery=False,
-            )
-
-        else:
-            logger.debug("Using Default Credentials")
-            defaultCreds, _ = default()
-
-            if not defaultCreds:
-                return GoogleCalendarResponse(error="defaultCreds not found")
-
-            service = build("calendar", "v3", credentials=defaultCreds)
-
-        if not service:
-            return GoogleCalendarResponse(
-                error="Google Calendar Service not created, find a better way"
-            )
-
+        service = getService(logger)
         calendar_list = service.calendarList().list().execute()
+
         for calendar in calendar_list["items"]:
             logger.debug(f"Calendar Name: {calendar['summary']}")
             logger.debug(f"Calendar ID: {calendar['id']}\n\n")
@@ -119,9 +117,7 @@ def GoogleCalendarServiceScript(
             },
         }
 
-        calendarIdList = service.calendarList().list().execute()
-        logger.debug(f"Calendar List: {calendarIdList}\n")
-
+        logger.debug(f"Calendar List: {calendar_list}\n")
         logger.debug(f"Event Object: {myEvent}\n")
         logger.debug("Creating Event")
 
@@ -139,7 +135,9 @@ def GoogleCalendarServiceScript(
         else:
             logger.debug("Event Created")
             logger.debug(f"Created Event: {created_event}")
+
             return GoogleCalendarResponse(success="Event Created")
     except (HttpError, MutualTLSChannelError) as error:
         logger.exception(error)
+        
         return GoogleCalendarResponse(error=str(error))

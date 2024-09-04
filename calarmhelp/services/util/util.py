@@ -3,8 +3,7 @@ from enum import Enum
 import json
 from typing import Any, Dict, Optional, Union
 
-from pydantic import BaseModel, Extra, Field
-
+from pydantic import BaseModel, Field
 
 class CreateAlarmRequest(BaseModel):
     input: str
@@ -78,8 +77,7 @@ class GoogleCalendarInfoInput(BaseModel):
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), default=str)
 
-from pydantic import BaseModel
-from typing import Any, Dict
+
 
 class GoogleCalendarResponse(BaseModel):
     """Model for Google Calendar response with dynamic keys."""
