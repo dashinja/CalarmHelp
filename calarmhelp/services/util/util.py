@@ -3,7 +3,7 @@ from enum import Enum
 import json
 from typing import Any, Dict, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Extra, Field
 
 
 class CreateAlarmRequest(BaseModel):
@@ -77,3 +77,37 @@ class GoogleCalendarInfoInput(BaseModel):
 
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), default=str)
+
+from pydantic import BaseModel
+from typing import Any, Dict
+
+class GoogleCalendarResponse(BaseModel):
+    """Model for Google Calendar response with dynamic keys."""
+
+    success: Optional[str] = None
+    error: Optional[str] = None
+
+    __pydantic_extra__: Dict[str, Any] = {}
+    
+    class Config:
+        extra = 'allow'
+
+    def __getitem__(self, item):
+        return self.__dict__.get(item)
+
+    def __getattr__(self, item):
+        if self.__pydantic_extra__ is None:
+            self.__pydantic_extra__ = {}
+        if item in self.__pydantic_extra__:
+            return self.__pydantic_extra__[item]
+        try:
+            return self.__dict__[item]
+        except KeyError:
+            raise AttributeError(f"'GoogleCalendarResponse' object has no attribute '{item}'")
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serializes object"""
+        return self.model_dump()
+
+    def to_json(self) -> str:
+        return self.model_dump_json()

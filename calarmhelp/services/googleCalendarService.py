@@ -11,7 +11,10 @@ from googleapiclient.errors import HttpError
 from google.auth.transport.requests import Request
 
 
-from calarmhelp.services.util.util import GoogleCalendarInfoInput
+from calarmhelp.services.util.util import (
+    GoogleCalendarInfoInput,
+    GoogleCalendarResponse,
+)
 
 
 from google.oauth2 import service_account
@@ -41,7 +44,7 @@ def isCalendarFound(calendar_id: str | None, service):
 
 def GoogleCalendarServiceScript(
     whole_user_input: GoogleCalendarInfoInput, logger: Logger
-) -> dict[str, Any]:
+) -> GoogleCalendarResponse:
     """
     Interacts with the Google Calendar API to create a new event on the user's calendar.
 
@@ -89,12 +92,14 @@ def GoogleCalendarServiceScript(
             defaultCreds, _ = default()
 
             if not defaultCreds:
-                return {"error": "defaultCreds not found"}
+                return GoogleCalendarResponse(error="defaultCreds not found")
 
             service = build("calendar", "v3", credentials=defaultCreds)
 
         if not service:
-            return {"error": "google calendar service not created, find a better way"}
+            return GoogleCalendarResponse(
+                error="Google Calendar Service not created, find a better way"
+            )
 
         calendar_list = service.calendarList().list().execute()
         for calendar in calendar_list["items"]:
@@ -127,14 +132,14 @@ def GoogleCalendarServiceScript(
                 service.events().insert(calendarId=calendar_id, body=myEvent).execute()
             )
         else:
-            return {"error": "Calendar not found"}
+            return GoogleCalendarResponse(error="Calendar not found")
 
         if not created_event:
-            return {"error": "Event Creation Failed"}
+            return GoogleCalendarResponse(error="Event Creation Failed")
         else:
             logger.debug("Event Created")
             logger.debug(f"Created Event: {created_event}")
-            return {"success": "Event Created"}
+            return GoogleCalendarResponse(success="Event Created")
     except (HttpError, MutualTLSChannelError) as error:
         logger.exception(error)
-        return {"error": str(error)}
+        return GoogleCalendarResponse(error=str(error))
