@@ -70,11 +70,13 @@ def create_alarm_readout(input: CalendarAlarmResponse) -> str:
     month = input.event_time.strftime("%B")
     day_number = input.event_time.strftime("%d")
     day_of_week = input.event_time.strftime("%A")
-    time_of_day = input.event_time.strftime("%I:%M %p")
+    hour = input.event_time.strftime("%I").lstrip("0")
+    minutes_am_pm = input.event_time.strftime(":%M %p")
+    time_of_day = hour + minutes_am_pm
     locationCondition = f"{(' at ' + input.location) if input.location else ''}"
-
+    
     # Take care with format. Everything, even spacing - is intentional.
-    return f"{input.name} @ {time_of_day}{locationCondition} on {day_of_week} {month} {day_number} #{input.category.name.lower()} [{input.lead_time}m]"
+    return f"{input.name.capitalize()} @ {time_of_day}{locationCondition} on {day_of_week} {month} {day_number.casefold()} #{input.category.name.lower()} [{input.lead_time}m]"
 
 
 @component

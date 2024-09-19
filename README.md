@@ -144,6 +144,9 @@ For Running locally with Docker [click here](README.Docker.md#locally-with-docke
 <br>
 
 #### Docker-Start:
+Step 0 is to ensure that Docker-Desktop is running.
+<br>
+<br>
 To start your application with Docker, run:
 
 `poetry run docker-start`
