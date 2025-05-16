@@ -30,9 +30,13 @@ precommit = "calarmhelp.scripts.precommit:run"
 docker-start = "calarmhelp.scripts.docker_start:run"
 docker-build = "calarmhelp.scripts.docker_build:run"
 deploy-app = "calarmhelp.scripts.deploy_app:run"
+test = "calarmhelp.scripts.run_tests:run"
 
 [tool.poetry.group.dev.dependencies]
 pyproject-pre-commit = "^0.2.1"
+pytest = "^8.3.5"
+pytest-mock = "^3.14.0"
+pytest-cov = "^6.1.1"
 
 [build-system]
 requires = ["poetry-core"]
