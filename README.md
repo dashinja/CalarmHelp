@@ -167,9 +167,24 @@ To push your application with Docker, run:
 #### Deploy-App
 To deploy your application to Google Cloud, run:
 
-`poetry run deploy-app <image-tag>`
+`poetry run deploy-app <tag-name>`
+
+Where `<tag-name>` becomes part of your image name in the format:
+`gcr.io/calarmhelp/calarmhelp:<tag-name>`
+
+Examples:
+- `poetry run deploy-app latest` → Creates image `gcr.io/calarmhelp/calarmhelp:latest`
+- `poetry run deploy-app v1.0` → Creates image `gcr.io/calarmhelp/calarmhelp:v1.0`
+- `poetry run deploy-app test-build` → Creates image `gcr.io/calarmhelp/calarmhelp:test-build`
+
 ##### Important
-This command is comprehensive and will build, push, and deploy your application to Google Cloud Run as well as update the traffic to the new revision.
+This command is comprehensive and will:
+1. Build the Docker image with your specified tag
+2. Push the image to Google Container Registry
+3. Deploy the application to Google Cloud Run
+4. Update the traffic to route to the new revision
+
+Note: Use simple tag names without special characters or multiple colons.
 <br>
 <br>
 
