@@ -11,7 +11,7 @@ When you're ready to run locally, start your application by running:
 
 Your application will be available at http://localhost:8000.
 
-(To run locally on your macine without docker [click here](README.md#locally-on-your-machine))
+(To run locally on your machine without docker [click here](README.md#locally-on-your-machine))
 _________________
 
 ### Deploying to Google Cloud
