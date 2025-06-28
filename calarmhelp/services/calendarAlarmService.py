@@ -74,7 +74,7 @@ def create_alarm_readout(input: CalendarAlarmResponse) -> str:
     minutes_am_pm = input.event_time.strftime(":%M %p")
     time_of_day = hour + minutes_am_pm
     locationCondition = f"{(' at ' + input.location) if input.location else ''}"
-    
+
     # Take care with format. Everything, even spacing - is intentional.
     return f"{input.name.capitalize()} @ {time_of_day}{locationCondition} on {day_of_week} {month} {day_number.casefold()} #{input.category.name.lower()} [{input.lead_time}m]"
 
@@ -143,7 +143,7 @@ class CalendarAlarmServicePipeline:
 
     def __init__(self, max_loops_allowed: int = 20):
         self._generator = OpenAIGenerator(
-            model="gpt-4o",
+            model="gpt-4.1",
             generation_kwargs={"temperature": 0},
             api_key=Secret.from_env_var("OPENAI_API_KEY"),
         )

@@ -50,9 +50,9 @@
     }
     
 
-	Assume 'event_time' and 'event_time_end' are on the same day as 'current_time' unless noted. Add 30 minutes to 'event_time' if 'event_time_end' is missing. Do not create events in the past.
-
-	If done, say 'DONE' and return new entities. Otherwise, return the best properties. Return an empty string for optional entities if not found.
+	Assume 'event_time' and 'event_time_end' are on the same day as 'current_time' unless noted. If 'AM' or 'PM' or 'morning' or 'noon' or 'afternoon' or 'evening' or 'night' is present: then check the current time and compare to the input time. The next occurence of the time is the one to use. That means if if the input is "Two o'clock" and the current time is 1:30 PM, then the next occurrence of "Two o'clock" is 2:00 PM today. If the input is "Two o'clock" and the current time is 2:30 PM, then the next occurrence of "Two o'clock" is 2:00 PM tomorrow. If no AM/PM or time of day is present, assume the time is in the same day as 'current_time'.
+	
+	 30 minutes to 'event_time' if 'event_time_end' is missing. Do not create events in the past. Return an empty string for optional entities if not found.
 
 	Output in markdown JSON:
 {% else %}
@@ -107,7 +107,9 @@
 		error: bool (default: False)
 		current_time: datetime
 
-	Assume 'event_time' and 'event_time_end' are on the same day as 'current_time' unless noted. Add 30 minutes to 'event_time' if 'event_time_end' is missing. Do not create events in the past. Return an empty string for optional entities if not found.
+	Assume 'event_time' and 'event_time_end' are on the same day as 'current_time' unless noted. If 'AM' or 'PM' or 'morning' or 'noon' or 'afternoon' or 'evening' or 'night' is present: then check the current time and compare to the input time. The next occurence of the time is the one to use. That means if if the input is "Two o'clock" and the current time is 1:30 PM, then the next occurrence of "Two o'clock" is 2:00 PM today. If the input is "Two o'clock" and the current time is 2:30 PM, then the next occurrence of "Two o'clock" is 2:00 PM tomorrow. If no AM/PM or time of day is present, assume the time is in the same day as 'current_time'.
+	
+	 30 minutes to 'event_time' if 'event_time_end' is missing. Do not create events in the past. Return an empty string for optional entities if not found.
 
 	Output in markdown JSON:
 {% endif %}
